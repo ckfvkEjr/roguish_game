@@ -52,9 +52,11 @@ class Entity:
             pygame.display.get_surface().blit(hp_text, (tx, ty))
 
     def draw_attack_range(self):
+        # (선택) 공격 범위 원을 그립니다. 디버그용으로만 사용하세요.
         center = (int(self.x + self.size/2), int(self.y + self.size/2))
         pygame.draw.circle(pygame.display.get_surface(), (255, 255, 0),
-                           center, TILE_SIZE*2, 1)
+                           center, TILE_SIZE, 1)
+
 
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.size, self.size)
@@ -85,3 +87,42 @@ class Entity:
                 player.hp -= self.damage
                 player.last_damage_time = now
             self.last_attack_time = now
+
+    def attack_enemies(self, enemies, bosses=None):
+        """
+        플레이어가 적(enemies)과 보스(bosses)를 공격할 때 호출합니다.
+        - 공격 속도(self.attack_speed) 쿨타임을 지켜서 발동
+        - 공격 범위 = TILE_SIZE 이내에서 가장 먼저 만난 대상 하나에만 데미지
+        - hp <= 0이 되면, 해당 원본 리스트에서 제거
+        """
+        now = time.time()
+        if now - self.last_attack_time < self.attack_speed:
+            return
+
+        # 공격 대상 후보 합치기
+        targets = []
+        if enemies:
+            targets.extend(enemies)
+        if bosses:
+            targets.extend(bosses)
+
+        # 플레이어 중심 좌표
+        cx = self.x + self.size / 2
+        cy = self.y + self.size / 2
+
+        for enemy in targets:
+            ex = enemy.x + enemy.size / 2
+            ey = enemy.y + enemy.size / 2
+            dist = math.hypot(ex - cx, ey - cy)
+            if dist <= TILE_SIZE:
+                # 데미지 적용
+                enemy.hp -= self.damage
+                self.last_attack_time = now
+
+                # 적 사망 시 실제 원본 리스트에서 제거
+                if enemy.hp <= 0:
+                    if enemies and enemy in enemies:
+                        enemies.remove(enemy)
+                    elif bosses and enemy in bosses:
+                        bosses.remove(enemy)
+                break

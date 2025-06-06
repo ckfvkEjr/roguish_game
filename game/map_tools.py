@@ -189,7 +189,7 @@ def generate_boss_for_room(tilemap):
     Returns:
         list with one boss Entity
     """
-    bosses = []
+    bosses = [] 
     for row in range(len(tilemap)):
         for col in range(len(tilemap[row])):
             if tilemap[row][col] == 5:
