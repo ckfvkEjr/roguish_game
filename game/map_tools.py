@@ -148,21 +148,39 @@ from game.collision import check_tile_collision, check_corner_collision, check_p
 
 def generate_enemies_for_room(tilemap, room_x, room_y, start_x, start_y):
     """
-    현재 방의 타일맵을 기반으로 적을 생성합니다.
-    시작 방(start_x, start_y)에서는 적을 생성하지 않습니다.
-    Returns:
-        list of Entity
+    1) 시작 방이면 빈 리스트 반환
+    2) tilemap을 순회하면서 tile == 4인 칸만 '가능 위치'에 추가
+    3) rate 확률로 스폰
     """
+    # 시작 방이면 적 생성 안 함
     if (room_x, room_y) == (start_x, start_y):
+        print(f"[generate_enemies] 시작 방 ({room_x},{room_y}) -> 생성 안 함")
         return []
+
     enemies = []
+    possible_positions = []
+
+    # 1) 빈 칸(tile==4) 세기
+    for r in range(len(tilemap)):
+        for c in range(len(tilemap[r])):
+            if tilemap[r][c] == 4:
+                possible_positions.append((c, r))
+
+    print(f"[generate_enemies] 방 ({room_x},{room_y})에서 '4' 타일 개수:", len(possible_positions))
+
+    # 2) 확률 계산
     rate = 0.1 + 0.05 * (diff - 1)
-    for row in range(len(tilemap)):
-        for col in range(len(tilemap[row])):
-            if tilemap[row][col] == 4 and random.random() < rate:
-                et = random.choice(list(config.enemy_types(diff).keys()))
-                e = Entity(col*TILE_SIZE, row*TILE_SIZE, et, entity_type=et)
-                enemies.append(e)
+    print(f"[generate_enemies] 난이도 diff={diff}, 확률 rate={rate:.3f}")
+
+    # 3) 실제 스폰 시도
+    for (c, r) in possible_positions:
+        if random.random() < rate:
+            et = random.choice(list(config.enemy_types(diff).keys()))
+            e = Entity(c * TILE_SIZE, r * TILE_SIZE, et, entity_type=et)
+            enemies.append(e)
+            print(f"  → 스폰: 타입 {et} 위치 ({c},{r})")
+
+    print(f"[generate_enemies] 최종 생성된 적 개수:", len(enemies))
     return enemies
 
 def generate_boss_for_room(tilemap):
@@ -202,42 +220,64 @@ def draw_tilemap(tilemap):
 def move_to_next_room(direction, player,
                       current_x, current_y,
                       map_data, room_connections,
-                      explored_rooms,
-                      start_x, start_y,
+                      explored_rooms, start_x, start_y,
                       boss_x, boss_y):
     """
-    주어진 방향으로 문을 통해 다음 방으로 이동하고
-    플레이어 위치, current_x/y, tilemap, enemies 를 반환합니다.
+    direction: "up", "down", "left", "right"
+    player: Entity
+    current_x, current_y: 현재 방 좌표
+    map_data: {(x,y) -> 9x9 타일맵}
+    room_connections: {(x,y) -> {"up":bool, …}}
+    explored_rooms: {(x,y) -> bool}
+    start_x, start_y: 시작 방 좌표
+    boss_x, boss_y: 보스 방 좌표
+
+    반환값: (new_x, new_y, new_tilemap, new_enemies)
     """
-    tilemap = map_data[(current_x, current_y)]
-    conns = room_connections[(current_x, current_y)]
-    # 문 통과 가능 여부 확인
+    tilemap      = map_data[(current_x, current_y)]
+    conns        = room_connections[(current_x, current_y)]
+
+    # 1) 문 통과 여부 체크
     if not check_player_at_door(player, direction, tilemap, conns):
         return current_x, current_y, tilemap, []
+
+    # 2) 연결 정보가 False면 이동 불가
     if not conns.get(direction):
         return current_x, current_y, tilemap, []
-    # 좌표 변경 및 플레이어 초기 위치 설정
+
+    # 3) 실제 좌표(방 번호) 변경 및 플레이어 재배치
     if direction == "up":
-        nx, ny = current_x, current_y - 1
-        player.x, player.y = TILE_SIZE*4, TILE_SIZE*8
+        new_x, new_y = current_x, current_y - 1
+        player.x, player.y = TILE_SIZE * 4, TILE_SIZE * 8
     elif direction == "down":
-        nx, ny = current_x, current_y + 1
-        player.x, player.y = TILE_SIZE*4, TILE_SIZE
+        new_x, new_y = current_x, current_y + 1
+        player.x, player.y = TILE_SIZE * 4, TILE_SIZE
     elif direction == "left":
-        nx, ny = current_x - 1, current_y
-        player.x, player.y = TILE_SIZE*8, TILE_SIZE*4
-    else:  # right
-        nx, ny = current_x + 1, current_y
-        player.x, player.y = TILE_SIZE, TILE_SIZE*4
-    # 새로운 방 정보
-    new_tilemap = map_data[(nx, ny)]
-    # 적/보스 생성
-    if not explored_rooms.get((nx, ny), False):
-        if (nx, ny) == (boss_x, boss_y):
-            enemies = generate_boss_for_room(new_tilemap)
+        new_x, new_y = current_x - 1, current_y
+        player.x, player.y = TILE_SIZE * 8, TILE_SIZE * 4
+    else:  # "right"
+        new_x, new_y = current_x + 1, current_y
+        player.x, player.y = TILE_SIZE, TILE_SIZE * 4
+
+    # 4) 새로운 방 불러오기
+    new_tilemap = map_data[(new_x, new_y)]
+    new_conns   = room_connections[(new_x, new_y)]
+    new_tilemap = add_doors_to_room(new_tilemap, new_conns)
+
+    # 5) 적/보스 생성 여부 판단
+    if not explored_rooms.get((new_x, new_y), False):
+        if (new_x, new_y) == (boss_x, boss_y):
+            new_enemies = generate_boss_for_room(new_tilemap)
         else:
-            enemies = generate_enemies_for_room(new_tilemap, nx, ny, start_x, start_y)
+            new_enemies = generate_enemies_for_room(
+                tilemap=new_tilemap,
+                room_x=new_x, room_y=new_y,
+                start_x=start_x, start_y=start_y
+            )
     else:
-        enemies = []
-    explored_rooms[(nx, ny)] = True
-    return nx, ny, new_tilemap, enemies
+        new_enemies = []  # 이미 방문한 방이면 적 제거
+
+    # 6) 탐험 플래그 갱신
+    explored_rooms[(new_x, new_y)] = True
+
+    return new_x, new_y, new_tilemap, new_enemies

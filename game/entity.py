@@ -14,7 +14,7 @@ class Entity:
 
         if entity_type == "player":
             self.hp               = 100
-            self.speed            = (TILE_SIZE/50)*0.4 + (TILE_SIZE/50)*0.01*diff
+            self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*diff
             self.color            = RED
             self.attack_speed     = 0.75 - 0.025*diff
             self.damage           = 5

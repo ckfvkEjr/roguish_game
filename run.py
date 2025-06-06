@@ -31,7 +31,7 @@ def main():
     current_x, current_y = start_x, start_y
     tilemap = map_data[(current_x, current_y)]
     enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y)
-    boss = generate_boss_for_room(map_data[(boss_x, boss_y)])
+    boss = []
     explored_rooms = {(x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT)}
     explored_rooms[(start_x, start_y)] = True
 
@@ -141,13 +141,28 @@ def main():
         # 탐험 상태 업데이트
         explored_rooms[(current_x, current_y)] = True
 
-        # 화면 그리기
         screen.fill(BLACK)
+
+        # 맵(타일)을 먼저 그린다
         draw_tilemap(tilemap)
+
+        # 적·보스 그리기 (적이 맵 위에 올려지도록)
+        for enemy in enemies:
+            enemy.draw()
+        for b in boss:
+            b.draw()
+
+        # 플레이어를 그린다 (플레이어가 적보다 위에 보이길 원하면 이 위치를 바꿔도 됩니다)
         player.draw()
+
+        # 미니맵 등 UI 요소를 마지막에 그린다
         minimap.draw_minimap(explored_rooms, current_x, current_y,
                              MAP_WIDTH, MAP_HEIGHT, len(enemies), room_connections)
+
+        # 화면 업데이트
         pygame.display.flip()
+        # ───────────────────────────────────
+
         clock.tick(60)
 
 if __name__ == '__main__':

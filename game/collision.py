@@ -42,13 +42,38 @@ def check_player_enemy_collision(player, enemies, tilemap):
     return False
 
 def check_player_at_door(player, direction, tilemap, room_conns):
-    """플레이어가 방 경계의 문 위치에 있는지 확인합니다."""
-    if direction == "up" and player.y <= 0 and room_conns.get("up") and tilemap[0][4] == door:
-        return True
-    if direction == "down" and player.y >= TILE_SIZE*8 and room_conns.get("down") and tilemap[8][4] == door:
-        return True
-    if direction == "left" and player.x <= 0 and room_conns.get("left") and tilemap[4][0] == door:
-        return True
-    if direction == "right" and player.x >= TILE_SIZE*8 and room_conns.get("right") and tilemap[4][8] == door:
-        return True
+    """
+    간단한 좌표 비교로 문 타일에 닿았는지 확인합니다.
+    - 'player.x / player.y' 값만 보고, 미리 정해진 픽셀 기준으로 문 위치 판정
+    - room_conns[direction]이 True인지도 함께 확인
+    - tilemap[...] == door 으로 해당 타일이 실제 문인지 최종 판단
+    """
+    # 위쪽 문: y <= TILE_SIZE - 10, 타일 인덱스 (0,4)
+    if direction == "up":
+        if (player.y <= TILE_SIZE - 10             # 플레이어가 방 상단에 거의 닿았는지
+                and room_conns.get("up")           # 위쪽에 연결이 열려 있는지
+                and tilemap[0][4] == door):        # (0,4) 타일이 실제 문인지
+            return True
+
+    # 아래쪽 문: y >= TILE_SIZE*8 (8*75=600)
+    if direction == "down":
+        if (player.y >= TILE_SIZE * 8
+                and room_conns.get("down")
+                and tilemap[8][4] == door):
+            return True
+
+    # 왼쪽 문: x <= TILE_SIZE - 10
+    if direction == "left":
+        if (player.x <= TILE_SIZE - 10
+                and room_conns.get("left")
+                and tilemap[4][0] == door):
+            return True
+
+    # 오른쪽 문: x >= TILE_SIZE*8
+    if direction == "right":
+        if (player.x >= TILE_SIZE * 8
+                and room_conns.get("right")
+                and tilemap[4][8] == door):
+            return True
+
     return False
