@@ -35,10 +35,9 @@ def reset_diff():
 def itdiff():
     return int(diff)
 
-# 맵 크기
-def map_size(diff):
-    MAP_WIDTH  = 1 + 2 * diff
-    MAP_HEIGHT = 1 + 2 * diff
+# 맵 크기(함수로 조절 가능하게 해야함)
+MAP_WIDTH  = 1 + 2 * diff
+MAP_HEIGHT = 1 + 2 * diff
 
 # 점수 처리
 scores = 0
