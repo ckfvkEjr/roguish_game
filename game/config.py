@@ -36,8 +36,9 @@ def itdiff():
     return int(diff)
 
 # 맵 크기
-MAP_WIDTH  = 1 + 2 * diff
-MAP_HEIGHT = 1 + 2 * diff
+def map_size(diff):
+    MAP_WIDTH  = 1 + 2 * diff
+    MAP_HEIGHT = 1 + 2 * diff
 
 # 점수 처리
 scores = 0
