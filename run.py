@@ -19,7 +19,7 @@ stage = 1           # 현재 스테이지 (1부터 시작)
 boss_active = False # 보스 방 입장 후 처치 대기 중인지 여부
 
 def main():
-    global boss_active, stage   
+    global boss_active, stage, MAP_WIDTH, MAP_HEIGHT
     # 초기화
     pygame.init()
     pygame.display.set_caption('로그라이크 맵')
@@ -27,7 +27,7 @@ def main():
     clock = pygame.time.Clock()
 
     # 맵 생성
-    map_data, room_connections, (start_x, start_y), (boss_x, boss_y) =         generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
+    map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
     debug.print_map_data(map_data, MAP_WIDTH, MAP_HEIGHT)
     debug.print_room_connections(room_connections, MAP_WIDTH, MAP_HEIGHT)
 
@@ -177,6 +177,8 @@ def main():
             # 3) diff(난이도) 수치 1 증가
             config.diffs(1)      # 또는 diff += 1 해도 되지만, config 내부 함수를 권장
             # 4) 새로운 맵 생성 (diff가 바뀌면서 MAP_WIDTH/HEIGHT도 변경됨)
+            MAP_HEIGHT = MAP_HEIGHT + 2
+            MAP_WIDTH = MAP_WIDTH + 2
             map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = \
                 generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
             debug.print_map_data(map_data, MAP_WIDTH, MAP_HEIGHT)
