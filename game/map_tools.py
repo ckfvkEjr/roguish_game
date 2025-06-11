@@ -146,7 +146,7 @@ def check_player_at_door(player, direction, tilemap, room_conns):
 
 from game.collision import check_tile_collision, check_corner_collision, check_player_enemy_collision, check_player_at_door
 
-def generate_enemies_for_room(tilemap, room_x, room_y, start_x, start_y):
+def generate_enemies_for_room(tilemap, room_x, room_y, start_x, start_y, diff):
     """
     1) 시작 방이면 빈 리스트 반환
     2) tilemap을 순회하면서 tile == 4인 칸만 '가능 위치'에 추가
@@ -183,7 +183,7 @@ def generate_enemies_for_room(tilemap, room_x, room_y, start_x, start_y):
     print(f"[generate_enemies] 최종 생성된 적 개수:", len(enemies))
     return enemies
 
-def generate_boss_for_room(tilemap):
+def generate_boss_for_room(tilemap, diff):
     """
     현재 보스룸의 타일맵을 기반으로 보스를 생성합니다.
     Returns:
@@ -267,12 +267,12 @@ def move_to_next_room(direction, player,
     # 5) 적/보스 생성 여부 판단
     if not explored_rooms.get((new_x, new_y), False):
         if (new_x, new_y) == (boss_x, boss_y):
-            new_enemies = generate_boss_for_room(new_tilemap)
+            new_enemies = generate_boss_for_room(new_tilemap, config.itdiff())
         else:
             new_enemies = generate_enemies_for_room(
                 tilemap=new_tilemap,
                 room_x=new_x, room_y=new_y,
-                start_x=start_x, start_y=start_y
+                start_x=start_x, start_y=start_y, diff=config.itdiff()
             )
     else:
         new_enemies = []  # 이미 방문한 방이면 적 제거

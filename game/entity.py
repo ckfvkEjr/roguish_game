@@ -5,6 +5,7 @@ import math
 import time
 from game.config import TILE_SIZE, RED, BLACK, diff, enemy_types, boss_types
 from game.collision import check_corner_collision
+import game.config as config
 
 class Entity:
     def __init__(self, x, y, symbol, entity_type="player"):
@@ -14,16 +15,16 @@ class Entity:
 
         if entity_type == "player":
             self.hp               = 100
-            self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*diff
+            self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*config.itdiff()
             self.color            = RED
-            self.attack_speed     = 0.75 - 0.025*diff
+            self.attack_speed     = 0.75 - 0.025*config.itdiff()
             self.damage           = 5
             self.size             = TILE_SIZE * 0.25
             self.last_damage_time = 0
             self.last_attack_time = 0
             self.last_direction   = "down"
         elif entity_type.startswith("B_"):
-            attrs = boss_types(diff).get(entity_type, boss_types(diff)["B_a"])
+            attrs = boss_types(config.itdiff()).get(entity_type, boss_types(config.itdiff())["B_a"])
             self.hp               = attrs["hp"]
             self.speed            = attrs["speed"]
             self.color            = attrs["color"]
@@ -32,7 +33,7 @@ class Entity:
             self.size             = attrs["size"]
             self.last_attack_time = 0
         else:
-            attrs = enemy_types(diff).get(entity_type, enemy_types(diff)["a"])
+            attrs = enemy_types(config.itdiff()).get(entity_type, enemy_types(config.itdiff())["a"])
             self.hp               = attrs["hp"]
             self.speed            = attrs["speed"]
             self.color            = attrs["color"]

@@ -2,20 +2,25 @@
 
 import pygame
 from game.config import *
+import game.config as config
 
 def draw_minimap(explored_rooms, current_x, current_y, width, height, texts, room_connections):
-    minimap_size = (TILE_SIZE/50)*100
+    global diff
+    minimap_size = (TILE_SIZE/50)*125
     minimap_x = SCREEN_WIDTH - minimap_size - 10
     minimap_y = SCREEN_HEIGHT - minimap_size - 10
     font = pygame.font.SysFont(None, 24)
 
     text = f"enemies : {texts}"
     text2 = f"x : {current_x}, y : {current_y}"
+    text3 = f"stage : {config.itdiff()}"
     ts   = font.render(text,  True, WHITE)
     ts2  = font.render(text2, True, WHITE)
+    ts3 = font.render(text3, True, WHITE)
     screen = pygame.display.get_surface()
-    screen.blit(ts,  (minimap_x, minimap_y - 30))
-    screen.blit(ts2, (minimap_x, minimap_y - 10))
+    screen.blit(ts3,  (minimap_x, minimap_y - 80))
+    screen.blit(ts,  (minimap_x, minimap_y - 60))
+    screen.blit(ts2, (minimap_x, minimap_y - 40))
 
     room_w = minimap_size / width
     room_h = minimap_size / height

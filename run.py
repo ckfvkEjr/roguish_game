@@ -35,7 +35,7 @@ def main():
     player = Entity(TILE_SIZE*4.5, TILE_SIZE*4.5, '@', entity_type="player")
     current_x, current_y = start_x, start_y
     tilemap = map_data[(current_x, current_y)]
-    enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y)
+    enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y, config.itdiff())
     boss = []
     explored_rooms = {(x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT)}
     explored_rooms[(start_x, start_y)] = True
@@ -72,7 +72,7 @@ def main():
                     # ─── 보스 방 입장 시 보스 생성 + boss_active 활성화 ───
                     if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
                         print('보스 생성!')
-                        boss = generate_boss_for_room(tilemap)
+                        boss = generate_boss_for_room(tilemap, config.itdiff())
                         boss_active = True
                         enemies = []
 
@@ -90,8 +90,7 @@ def main():
                     tilemap  = new_tilemap
                     enemies  = new_enemies
                     if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
-                        print('보스 생성!')
-                        boss = generate_boss_for_room(tilemap)
+                        boss = generate_boss_for_room(tilemap, config.itdiff())
                         boss_active = True
                         enemies = []
 
@@ -110,7 +109,7 @@ def main():
                     enemies  = new_enemies
                     if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
                         print('보스 생성!')
-                        boss = generate_boss_for_room(tilemap)
+                        boss = generate_boss_for_room(tilemap, config.itdiff())
                         boss_active = True
                         enemies = []
 
@@ -128,7 +127,7 @@ def main():
                     tilemap  = new_tilemap
                     enemies  = new_enemies
                     if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
-                        boss = generate_boss_for_room(tilemap)
+                        boss = generate_boss_for_room(tilemap, config.itdiff())
                         boss_active = True
                         enemies = []
 
@@ -165,8 +164,6 @@ def main():
             b.attack(player)
             b.draw()
         
-        if boss_active:
-            print(len(boss))
          # ─── 보스 처치 완료 판정 ───
         # boss_active가 True 이면서 boss 리스트가 비어 있으면
         if boss_active and len(boss) == 0:
@@ -177,6 +174,7 @@ def main():
             # 3) diff(난이도) 수치 1 증가
             config.diffs(1)      # 또는 diff += 1 해도 되지만, config 내부 함수를 권장
             # 4) 새로운 맵 생성 (diff가 바뀌면서 MAP_WIDTH/HEIGHT도 변경됨)
+            diff = config.itdiff()
             MAP_HEIGHT = MAP_HEIGHT + 2
             MAP_WIDTH = MAP_WIDTH + 2
             map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = \
@@ -187,7 +185,9 @@ def main():
             # 5) 플레이어·적·보스 초기화
             current_x, current_y = start_x, start_y
             tilemap = map_data[(current_x, current_y)]
-            enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y)
+            player.x, player.y = TILE_SIZE*4, TILE_SIZE*4 
+            
+            enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y, config.itdiff())
             boss    = []  # 보스는 빈 리스트로 시작 (다음 보스 방 입장 시 생성)
 
             # 6) 탐험 기록(미니맵) 초기화
