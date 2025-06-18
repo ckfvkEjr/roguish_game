@@ -142,7 +142,7 @@ def main():
         if keys[pygame.K_DOWN]:
             new_y += player.speed
 
-        # 충돌 검사
+        # 충돌 검사 + 적 충돌 시스템 더해야 함 적,벽 / 
         if not check_tile_collision(new_x, player.y, player.size, tilemap) and            not check_player_enemy_collision(player, enemies + boss, tilemap):
             player.x = new_x
         if not check_tile_collision(player.x, new_y, player.size, tilemap) and            not check_player_enemy_collision(player, enemies + boss, tilemap):
