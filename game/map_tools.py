@@ -10,46 +10,6 @@ import game.config as config
 from game.mapset import predefined_rooms, start_rooms, boss_room
 from game.entity import Entity
 
-def generate_room_connections_with_constraints(width, height, branch_probability=0, max_connections=3):
-    """
-    DFS 기반으로 기본 미로를 생성하면서 분기점(branch)과 교차로를 제한적으로 추가합니다.
-    Returns:
-        connections: dict[(x,y)] -> {"up":bool, "down":bool, "left":bool, "right":bool}
-    """
-    connections = {(x, y): {"up": False, "down": False, "left": False, "right": False}
-                   for x in range(width) for y in range(height)}
-    visited = {(x, y): False for x in range(width) for y in range(height)}
-    stack = []
-    start_x, start_y = width // 2, height // 2
-    stack.append((start_x, start_y))
-    visited[(start_x, start_y)] = True
-    directions = [("up", 0, -1), ("down", 0, 1), ("left", -1, 0), ("right", 1, 0)]
-    reverse = {"up": "down", "down": "up", "left": "right", "right": "left"}
-    while stack:
-        cx, cy = stack[-1]
-        random.shuffle(directions)
-        found = False
-        for dir_name, dx, dy in directions:
-            nx, ny = cx + dx, cy + dy
-            if 0 <= nx < width and 0 <= ny < height and not visited[(nx, ny)]:
-                if sum(connections[(cx, cy)].values()) < max_connections:
-                    connections[(cx, cy)][dir_name] = True
-                    connections[(nx, ny)][reverse[dir_name]] = True
-                    visited[(nx, ny)] = True
-                    stack.append((nx, ny))
-                    found = True
-                    break
-        if not found:
-            stack.pop()
-        if random.random() < branch_probability:
-            for dir_name, dx, dy in directions:
-                nx, ny = cx + dx, cy + dy
-                if (0 <= nx < width and 0 <= ny < height and visited[(nx, ny)]
-                        and sum(connections[(cx, cy)].values()) < max_connections):
-                    connections[(cx, cy)][dir_name] = True
-                    connections[(nx, ny)][reverse[dir_name]] = True
-    return connections
-
 def add_doors_to_room(room, connections):
     """
     방 중앙 벽에 문(door)을 추가한 뒤, 실제 연결 여부에 따라
@@ -69,66 +29,123 @@ def add_doors_to_room(room, connections):
         room[4][8] = 1
     return room
 
-def select_boss_room_with_constraints(connections, start_x, start_y, width, height):
+def generate_grid_map(n, start, boss, branch_chance=0.2):
     """
-    시작 방에서 BFS로 거리를 계산한 뒤,
-    연결 수가 1개인 방들 중 랜덤하게 가장 먼 방을 보스룸으로 선택합니다.
+    n x n 그리드에 start, boss를 1로 설정 후,
+    1) 메인 경로 생성(carve_main_path)
+    2) 메인 경로 전체에 대해 분기 경로(add_branches)
+       * 분기 경로는 다른 경로와 접촉하지 않도록
     """
-    queue = deque([(start_x, start_y)])
-    visited = {(x, y): False for x in range(width) for y in range(height)}
-    distances = {(x, y): 0 for x in range(width) for y in range(height)}
-    visited[(start_x, start_y)] = True
-    while queue:
-        cx, cy = queue.popleft()
-        for dir_name, (dx, dy) in {"up": (0,-1), "down": (0,1), "left": (-1,0), "right": (1,0)}.items():
-            if connections[(cx, cy)].get(dir_name):
-                nx, ny = cx + dx, cy + dy
-                if not visited[(nx, ny)]:
-                    visited[(nx, ny)] = True
-                    distances[(nx, ny)] = distances[(cx, cy)] + 1
-                    queue.append((nx, ny))
-    candidates = [(x, y) for (x, y), conn in connections.items() if sum(conn.values()) == 1]
-    if candidates:
-        max_dist = max(distances[pos] for pos in candidates)
-        farthest = [pos for pos in candidates if distances[pos] == max_dist]
-        return random.choice(farthest)
-    return (width - 1, height - 1)
+    # 초기 0/1 그리드
+    grid = [[0] * n for _ in range(n)]
+    sx, sy = start
+    bx, by = boss
+    grid[sy][sx] = 1
+    grid[by][bx] = 1
+
+    # 1) 메인 경로 생성: 시작->보스
+    def carve_main_path():
+        cx, cy = sx, sy
+        path = [(cx, cy)]
+        while (cx, cy) != (bx, by):
+            # 목표 방향 차이 계산
+            dx, dy = bx - cx, by - cy
+            moves = []
+            if dx != 0:
+                moves.append((cx + (1 if dx > 0 else -1), cy))
+            if dy != 0:
+                moves.append((cx, cy + (1 if dy > 0 else -1)))
+            # 경로 선택에 약간 랜덤성 추가
+            next_x, next_y = random.choice(moves)
+            # 범위 내에서만 진행
+            if 0 <= next_x < n and 0 <= next_y < n:
+                cx, cy = next_x, next_y
+                if grid[cy][cx] == 0:
+                    grid[cy][cx] = 1
+                    path.append((cx, cy))
+        return path
+
+    main_path = carve_main_path()
+
+    # 2) 분기 경로 추가: main_path의 각 좌표에서
+    dirs = [(1,0),(-1,0),(0,1),(0,-1)]
+    diag = [(1,1),(1,-1),(-1,1),(-1,-1)]
+
+    def valid_branch(x, y, parent):
+        # 범위 및 비어있는지
+        if not (0 <= x < n and 0 <= y < n): return False
+        if grid[y][x] != 0: return False
+        # 인접성 확인
+        px, py = parent
+        if abs(x-px)+abs(y-py) != 1: return False
+        # 주변 8방향에 다른 path가 있으면 안 됨 (parent 제외)
+        for dx, dy in dirs+diag:
+            nx, ny = x+dx, y+dy
+            if (nx,ny) != parent and 0 <= nx < n and 0 <= ny < n:
+                if grid[ny][nx] == 1:
+                    return False
+        return True
+
+    for (px, py) in main_path:
+        if random.random() < branch_chance:
+            # 분기 길 길이
+            length = random.randint(1,3)
+            cx, cy = px, py
+            for _ in range(length):
+                random.shuffle(dirs)
+                for dx, dy in dirs:
+                    nx, ny = cx+dx, cy+dy
+                    if valid_branch(nx, ny, (cx, cy)):
+                        grid[ny][nx] = 1
+                        cx, cy = nx, ny
+                        break
+    return grid
+
 
 def generate_map_with_predefined_rooms(width, height):
     """
-    미리 정의된 방 세트(predefined_rooms, start_rooms, boss_room)를
-    랜덤하게 배치하여 전체 맵을 생성합니다.
-    Returns:
-        map_data, room_connections, (start_x, start_y), (boss_x, boss_y)
+    Isaac 스타일 그리드 생성으로 맵 데이터와 연결 정보를 반환합니다.
+    시작방은 중앙, 보스방은 테두리 좌표에서만 랜덤 선택
     """
-    room_connections = generate_room_connections_with_constraints(
-        width, height,
-        branch_probability=0.1 + config.itdiff() * 0.05,
-        max_connections=3
-    )
+    # 시작/보스 좌표 설정
+    sx, sy = width//2, height//2
+    borders = [(x,y) for x in range(width) for y in range(height)
+               if (x==0 or x==width-1 or y==0 or y==height-1) and (x,y)!=(sx,sy)]
+    bx, by = random.choice(borders)
+
+    # 그리드 생성
+    grid = generate_grid_map(width, (sx,sy), (bx,by))
+
+    # 데이터 초기화
     map_data = {}
-    start_x, start_y = width // 2, height // 2
-    boss_x, boss_y = select_boss_room_with_constraints(
-        room_connections, start_x, start_y, width, height
-    )
+    room_connections = {}
+
+    # 연결 정보 구성
     for y in range(height):
         for x in range(width):
-            layout = random.choice(list(predefined_rooms.values()))
-            room_matrix = [row.copy() for row in layout]
-            map_data[(x, y)] = add_doors_to_room(
-                room_matrix, room_connections[(x, y)]
-            )
-    start_layout = random.choice(list(start_rooms.values()))
-    map_data[(start_x, start_y)] = add_doors_to_room(
-        [row.copy() for row in start_layout],
-        room_connections[(start_x, start_y)]
-    )
-    boss_layout = random.choice(list(boss_room.values()))
-    map_data[(boss_x, boss_y)] = add_doors_to_room(
-        [row.copy() for row in boss_layout],
-        room_connections[(boss_x, boss_y)]
-    )
-    return map_data, room_connections, (start_x, start_y), (boss_x, boss_y)
+            if grid[y][x] == 1:
+                conns = {"up":False, "down":False, "left":False, "right":False}
+                if y>0 and grid[y-1][x]==1: conns["up"] = True
+                if y<height-1 and grid[y+1][x]==1: conns["down"] = True
+                if x>0 and grid[y][x-1]==1: conns["left"] = True
+                if x<width-1 and grid[y][x+1]==1: conns["right"] = True
+                room_connections[(x,y)] = conns
+
+    # 방 레이아웃 배치
+    from game.mapset import predefined_rooms, start_rooms, boss_room
+    for (x,y), conns in room_connections.items():
+        if (x,y)==(sx,sy):
+            base = random.choice(list(start_rooms.values()))
+        elif (x,y)==(bx,by):
+            base = random.choice(list(boss_room.values()))
+        else:
+            base = random.choice(list(predefined_rooms.values()))
+        room = [row.copy() for row in base]
+        room = add_doors_to_room(room, conns)
+        map_data[(x,y)] = room
+
+    return map_data, room_connections, (sx,sy), (bx,by)
+
 
 def check_player_at_door(player, direction, tilemap, room_conns):
     """

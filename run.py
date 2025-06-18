@@ -154,13 +154,15 @@ def main():
         
         # 적 행동
         for enemy in enemies:
-            enemy.move_towards(player.x, player.y, enemies=enemies)
+            enemy.move_towards(player.x, player.y, tilemap, enemies=enemies)
+            check_player_enemy_collision(player, [enemy], tilemap) 
             enemy.attack(player)
             enemy.draw()
 
         # 보스 행동
         for b in boss:
-            b.move_towards(player.x, player.y, enemies=enemies)
+            b.move_towards(player.x, player.y, tilemap, enemies=enemies)
+            check_player_enemy_collision(player, [b], tilemap)
             b.attack(player)
             b.draw()
         
@@ -220,7 +222,7 @@ def main():
         # 화면 업데이트
         pygame.display.flip()
         # ───────────────────────────────────
-
+        
         clock.tick(60)
 
 if __name__ == '__main__':

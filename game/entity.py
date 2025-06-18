@@ -4,7 +4,7 @@ import pygame
 import math
 import time
 from game.config import TILE_SIZE, RED, BLACK, diff, enemy_types, boss_types
-from game.collision import check_corner_collision
+from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
 
 class Entity:
@@ -62,23 +62,34 @@ class Entity:
     def get_rect(self):
         return pygame.Rect(self.x, self.y, self.size, self.size)
 
-    def move_towards(self, target_x, target_y, stop_distance=10, enemies=None):
+    def move_towards(self, target_x, target_y, tilemap, stop_distance=10, enemies=None):
         dx = target_x - self.x
         dy = target_y - self.y
         dist = math.hypot(dx, dy)
-        if dist > stop_distance:
-            dx, dy = dx/dist, dy/dist
-            self.x += dx * self.speed
-            self.y += dy * self.speed
+        if dist <= stop_distance:
+            return
+            # 정규화
+        dx_norm, dy_norm = dx / dist, dy / dist
 
-            if enemies:
-                for other in enemies:
-                    if other is not self and check_corner_collision(self, other):
-                        ox = (self.get_rect().centerx - other.get_rect().centerx)/2
-                        oy = (self.get_rect().centery - other.get_rect().centery)/2
-                        other.x += -ox * 0.1
-                        other.y += -oy * 0.1
-                        break
+        # X축 이동 시 맵 충돌 검사
+        new_x = self.x + dx_norm * self.speed
+        if not check_tile_collision(new_x, self.y, self.size, tilemap):
+            self.x = new_x
+
+        # Y축 이동 시 맵 충돌 검사
+        new_y = self.y + dy_norm * self.speed
+        if not check_tile_collision(self.x, new_y, self.size, tilemap):
+            self.y = new_y
+
+        # 다른 적들과의 충돌 방지 (살짝 밀어내기)
+        if enemies:
+            for other in enemies:
+                if other is not self and check_corner_collision(self, other):
+                    ox = (self.get_rect().centerx - other.get_rect().centerx) / 2
+                    oy = (self.get_rect().centery - other.get_rect().centery) / 2
+                    other.x += -ox * 0.1
+                    other.y += -oy * 0.1
+                    break
 
     def attack(self, player):
         now = time.time()

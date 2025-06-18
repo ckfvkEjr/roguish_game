@@ -35,8 +35,8 @@ def reset_diff():
 def itdiff():
     return int(diff)
 
-MAP_WIDTH = 3
-MAP_HEIGHT = 3
+MAP_WIDTH = 9
+MAP_HEIGHT = 9
 
 # 점수 처리
 scores = 0
@@ -52,9 +52,9 @@ def getscore():
 # (원본에 있던) 적·보스 속성 함수
 def enemy_types(diff):
     return {
-        "a": {"hp":5+(diff-1)*2, "speed":(TILE_SIZE/50)*0.1+diff*(TILE_SIZE/50)*0.01, "color":RED, "attack_speed":1+diff*0.05, "damage":2+(diff-1), "size":TILE_SIZE*0.25},
-        "b": {"hp":8+(diff-1)*2, "speed":(TILE_SIZE/50)*0.1+diff*(TILE_SIZE/50)*0.01, "color":GREEN, "attack_speed":1.5+diff*0.05, "damage":3+(diff-1), "size":TILE_SIZE*0.3},
-        "c": {"hp":10+(diff-1)*2,"speed":(TILE_SIZE/50)*0.08+diff*(TILE_SIZE/50)*0.01,"color":BLUE,"attack_speed":2+diff*0.05,"damage":4+(diff-1),"size":TILE_SIZE*0.35},
+        "a": {"hp":5+(diff-1)*2, "speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1, "color":RED, "attack_speed":1+diff*0.05, "damage":2+(diff-1), "size":TILE_SIZE*0.275},
+        "b": {"hp":8+(diff-1)*2, "speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1, "color":GREEN, "attack_speed":1.5+diff*0.05, "damage":3+(diff-1), "size":TILE_SIZE*0.33},
+        "c": {"hp":10+(diff-1)*2,"speed":(TILE_SIZE/50)*0.8+diff*(TILE_SIZE/50)*0.08,"color":BLUE,"attack_speed":2+diff*0.05,"damage":4+(diff-1),"size":TILE_SIZE*0.385},
     }
 
 def boss_types(diff):
