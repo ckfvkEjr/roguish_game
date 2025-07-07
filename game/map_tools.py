@@ -29,7 +29,7 @@ def add_doors_to_room(room, connections):
         room[4][8] = 1
     return room
 
-def generate_grid_map(n, start, boss, branch_chance=0.2):
+def generate_grid_map(n, start, boss, branch_chance = (0.2 + 0.025*config.itdiff())):
     """
     n x n 그리드에 start, boss를 1로 설정 후,
     1) 메인 경로 생성(carve_main_path)
@@ -65,41 +65,52 @@ def generate_grid_map(n, start, boss, branch_chance=0.2):
                     path.append((cx, cy))
         return path
 
-    main_path = carve_main_path()
+        # 메인 경로를 첫 번째 소스로 사용
+    sources = carve_main_path()
 
-    # 2) 분기 경로 추가: main_path의 각 좌표에서
-    dirs = [(1,0),(-1,0),(0,1),(0,-1)]
-    diag = [(1,1),(1,-1),(-1,1),(-1,-1)]
+    # 2) 분기 경로 추가: sources에 담긴 모든 좌표에서 분기 시도
+    dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
     def valid_branch(x, y, parent):
-        # 범위 및 비어있는지
-        if not (0 <= x < n and 0 <= y < n): return False
-        if grid[y][x] != 0: return False
-        # 인접성 확인
+        # 범위 및 빈 셀인지 확인
+        if not (0 <= x < n and 0 <= y < n):
+            return False
+        if grid[y][x] != 0:
+            return False
+        # 맨해튼 인접 확인
         px, py = parent
-        if abs(x-px)+abs(y-py) != 1: return False
-        # 주변 8방향에 다른 path가 있으면 안 됨 (parent 제외)
-        for dx, dy in dirs+diag:
-            nx, ny = x+dx, y+dy
-            if (nx,ny) != parent and 0 <= nx < n and 0 <= ny < n:
+        if abs(x - px) + abs(y - py) != 1:
+            return False
+        # 4방향 인접칸에 다른 경로가 있으면 안 됨 (parent 제외)
+        for dx, dy in dirs:
+            nx, ny = x + dx, y + dy
+            if (nx, ny) != parent and 0 <= nx < n and 0 <= ny < n:
                 if grid[ny][nx] == 1:
                     return False
         return True
 
-    for (px, py) in main_path:
+    # 분기 확장: sources 리스트에 브랜치된 노드를 추가하여 재귀적 브런치 허용
+    i = 0
+    while i < len(sources):
+        px, py = sources[i]
+        i += 1
+        # 분기 확률 체크
         if random.random() < branch_chance:
-            # 분기 길 길이
-            length = random.randint(1,3)
+            # 분기 크기는 diff 기반으로 조절
+            length = random.randint(config.itdiff(), config.itdiff() + 2)
             cx, cy = px, py
             for _ in range(length):
                 random.shuffle(dirs)
                 for dx, dy in dirs:
-                    nx, ny = cx+dx, cy+dy
+                    nx, ny = cx + dx, cy + dy
                     if valid_branch(nx, ny, (cx, cy)):
                         grid[ny][nx] = 1
+                        # 새로 뚫린 분기 좌표를 sources에 추가
+                        sources.append((nx, ny))
                         cx, cy = nx, ny
                         break
     return grid
+
 
 
 def generate_map_with_predefined_rooms(width, height):
