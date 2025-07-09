@@ -5,9 +5,9 @@ from collections import deque
 import pygame
 import math
 import time
-from game.config import TILE_SIZE, walkable_tiles, door, diff, BLUE, BLACK, VIOLET, WHITE, GREEN
+from game.config import TILE_SIZE, walkable_tiles, door, diff, BLUE, BLACK, VIOLET, WHITE, GREEN, YELLOW, item
 import game.config as config
-from game.mapset import predefined_rooms, start_rooms, boss_room
+from game.mapset import predefined_rooms, start_rooms, boss_room, Item_room, sp2_room
 from game.entity import Entity
 
 def add_doors_to_room(room, connections):
@@ -29,134 +29,148 @@ def add_doors_to_room(room, connections):
         room[4][8] = 1
     return room
 
-def generate_grid_map(n, start, boss, branch_chance = (0.2 + 0.025*config.itdiff())):
+def generate_grid_map(n, start, boss, branch_chance=(0.2 + 0.025*(config.itdiff() - 1))):
     """
     n x n 그리드에 start, boss를 1로 설정 후,
     1) 메인 경로 생성(carve_main_path)
-    2) 메인 경로 전체에 대해 분기 경로(add_branches)
+    2) 메인 경로 및 분기 노드 기반으로 브런치 확장
        * 분기 경로는 다른 경로와 접촉하지 않도록
+    반환: grid, main_path
     """
-    # 초기 0/1 그리드
-    grid = [[0] * n for _ in range(n)]
     sx, sy = start
     bx, by = boss
-    grid[sy][sx] = 1
-    grid[by][bx] = 1
+    grid = [[0] * n for _ in range(n)]
 
-    # 1) 메인 경로 생성: 시작->보스
+    # 시작방 초기 마킹 (보스방은 메인 경로 생성 후 마킹)
+    grid[sy][sx] = 1
+
+    # 1) 메인 경로 생성
     def carve_main_path():
         cx, cy = sx, sy
         path = [(cx, cy)]
         while (cx, cy) != (bx, by):
-            # 목표 방향 차이 계산
             dx, dy = bx - cx, by - cy
             moves = []
             if dx != 0:
                 moves.append((cx + (1 if dx > 0 else -1), cy))
             if dy != 0:
                 moves.append((cx, cy + (1 if dy > 0 else -1)))
-            # 경로 선택에 약간 랜덤성 추가
             next_x, next_y = random.choice(moves)
-            # 범위 내에서만 진행
-            if 0 <= next_x < n and 0 <= next_y < n:
+            if 0 <= next_x < n and 0 <= next_y < n and grid[next_y][next_x] == 0:
                 cx, cy = next_x, next_y
-                if grid[cy][cx] == 0:
-                    grid[cy][cx] = 1
-                    path.append((cx, cy))
+                grid[cy][cx] = 1
+                path.append((cx, cy))
         return path
 
-        # 메인 경로를 첫 번째 소스로 사용
-    sources = carve_main_path()
+    main_path = carve_main_path()
+    # 분기 노드 리스트 초기화
+    sources = main_path.copy()
 
-    # 2) 분기 경로 추가: sources에 담긴 모든 좌표에서 분기 시도
+    # 2) 분기 경로 확장
     dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-
-    def valid_branch(x, y, parent):
-        # 범위 및 빈 셀인지 확인
-        if not (0 <= x < n and 0 <= y < n):
-            return False
-        if grid[y][x] != 0:
-            return False
-        # 맨해튼 인접 확인
-        px, py = parent
-        if abs(x - px) + abs(y - py) != 1:
-            return False
-        # 4방향 인접칸에 다른 경로가 있으면 안 됨 (parent 제외)
-        for dx, dy in dirs:
-            nx, ny = x + dx, y + dy
-            if (nx, ny) != parent and 0 <= nx < n and 0 <= ny < n:
-                if grid[ny][nx] == 1:
-                    return False
-        return True
-
-    # 분기 확장: sources 리스트에 브랜치된 노드를 추가하여 재귀적 브런치 허용
     i = 0
     while i < len(sources):
         px, py = sources[i]
         i += 1
-        # 분기 확률 체크
         if random.random() < branch_chance:
-            # 분기 크기는 diff 기반으로 조절
             length = random.randint(config.itdiff(), config.itdiff() + 2)
             cx, cy = px, py
             for _ in range(length):
                 random.shuffle(dirs)
                 for dx, dy in dirs:
                     nx, ny = cx + dx, cy + dy
-                    if valid_branch(nx, ny, (cx, cy)):
+                    if 0 <= nx < n and 0 <= ny < n and grid[ny][nx] == 0:
+                        # 인접 4방향 다른 경로 충돌 검사
+                        ok = True
+                        for ddx, ddy in dirs:
+                            ax, ay = nx + ddx, ny + ddy
+                            if (ax, ay) != (cx, cy) and 0 <= ax < n and 0 <= ay < n and grid[ay][ax] == 1:
+                                ok = False
+                                break
+                        if not ok:
+                            continue
                         grid[ny][nx] = 1
-                        # 새로 뚫린 분기 좌표를 sources에 추가
                         sources.append((nx, ny))
                         cx, cy = nx, ny
                         break
-    return grid
-
+    return grid, main_path
 
 
 def generate_map_with_predefined_rooms(width, height):
     """
-    Isaac 스타일 그리드 생성으로 맵 데이터와 연결 정보를 반환합니다.
-    시작방은 중앙, 보스방은 테두리 좌표에서만 랜덤 선택
+    Isaac 스타일 그리드 생성 + 메인 경로 분기에서 특수방 노드 생성
     """
-    # 시작/보스 좌표 설정
-    sx, sy = width//2, height//2
-    borders = [(x,y) for x in range(width) for y in range(height)
-               if (x==0 or x==width-1 or y==0 or y==height-1) and (x,y)!=(sx,sy)]
+    # 시작/보스 좌표
+    sx, sy = width // 2, height // 2
+    borders = [
+        (x, y)
+        for x in range(width)
+        for y in range(height)
+        if (x == 0 or x == width - 1 or y == 0 or y == height - 1)
+        and (x, y) != (sx, sy)
+    ]
     bx, by = random.choice(borders)
 
-    # 그리드 생성
-    grid = generate_grid_map(width, (sx,sy), (bx,by))
+    # 그리드 및 메인 경로
+    grid, main_path = generate_grid_map(width, (sx, sy), (bx, by))
 
-    # 데이터 초기화
-    map_data = {}
+    # 3) 메인 경로 브런치에서 특수방 좌표 생성
+    dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    candidates = [pos for pos in main_path if pos not in [(sx, sy), (bx, by)]]
+    random.shuffle(candidates)
+    special_coords = {}
+    # 아이템방과 sp2방 순서대로 생성
+    for name, layout_dict in [('item', Item_room), ('sp2', sp2_room)]:
+        for px, py in candidates:
+            random.shuffle(dirs)
+            for dx, dy in dirs:
+                nx, ny = px + dx, py + dy
+                if 0 <= nx < width and 0 <= ny < height and grid[ny][nx] == 0:
+                    # 인접 충돌 검사
+                    ok = True
+                    for ddx, ddy in dirs:
+                        ax, ay = nx + ddx, ny + ddy
+                        if (ax, ay) != (px, py) and 0 <= ax < width and 0 <= ay < height and grid[ay][ax] == 1:
+                            ok = False
+                            break
+                    if not ok:
+                        continue
+                    grid[ny][nx] = 1
+                    special_coords[name] = (nx, ny)
+                    break
+            if name in special_coords:
+                break
+
+    # 4) 방 연결 정보 생성
     room_connections = {}
-
-    # 연결 정보 구성
     for y in range(height):
         for x in range(width):
             if grid[y][x] == 1:
-                conns = {"up":False, "down":False, "left":False, "right":False}
-                if y>0 and grid[y-1][x]==1: conns["up"] = True
-                if y<height-1 and grid[y+1][x]==1: conns["down"] = True
-                if x>0 and grid[y][x-1]==1: conns["left"] = True
-                if x<width-1 and grid[y][x+1]==1: conns["right"] = True
-                room_connections[(x,y)] = conns
+                conns = {"up": False, "down": False, "left": False, "right": False}
+                if y > 0 and grid[y - 1][x] == 1: conns["up"] = True
+                if y < height - 1 and grid[y + 1][x] == 1: conns["down"] = True
+                if x > 0 and grid[y][x - 1] == 1: conns["left"] = True
+                if x < width - 1 and grid[y][x + 1] == 1: conns["right"] = True
+                room_connections[(x, y)] = conns
 
-    # 방 레이아웃 배치
-    from game.mapset import predefined_rooms, start_rooms, boss_room
-    for (x,y), conns in room_connections.items():
-        if (x,y)==(sx,sy):
+    # 5) 레이아웃 배치
+    map_data = {}
+    for (x, y), conns in room_connections.items():
+        if (x, y) == (sx, sy):
             base = random.choice(list(start_rooms.values()))
-        elif (x,y)==(bx,by):
+        elif (x, y) == (bx, by):
             base = random.choice(list(boss_room.values()))
+        elif (x, y) == special_coords.get('item'):
+            base = random.choice(list(Item_room.values()))
+        elif (x, y) == special_coords.get('sp2'):
+            base = random.choice(list(sp2_room.values()))
         else:
             base = random.choice(list(predefined_rooms.values()))
         room = [row.copy() for row in base]
         room = add_doors_to_room(room, conns)
-        map_data[(x,y)] = room
+        map_data[(x, y)] = room
 
-    return map_data, room_connections, (sx,sy), (bx,by)
-
+    return map_data, room_connections, (sx, sy), (bx, by)
 
 def check_player_at_door(player, direction, tilemap, room_conns):
     """
@@ -239,7 +253,7 @@ def draw_tilemap(tilemap):
                 color = BLUE
             elif tile == 2:
                 color = BLACK
-            elif tile == door:
+            elif tile == door or tile == config.next_stage or tile == config.item:
                 color = VIOLET
             else:
                 color = WHITE

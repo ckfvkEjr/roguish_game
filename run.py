@@ -1,5 +1,6 @@
 import pygame
 import sys
+import time
 from game.config import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, MAP_WIDTH, MAP_HEIGHT, TILE_SIZE
 import game.config as config
 import game.debug as debug
@@ -17,6 +18,8 @@ from game.collision import check_tile_collision, check_player_enemy_collision
     # ─── 전역 상태 관리 변수 ───
 stage = 1           # 현재 스테이지 (1부터 시작)
 boss_active = False # 보스 방 입장 후 처치 대기 중인지 여부
+next_stage_active = False        # 추가: 다음 스테이지 타일 활성화 플래그
+next_stage_timer = None         # 추가: 타이머 시작 시간
 
 def main():
     global boss_active, stage, MAP_WIDTH, MAP_HEIGHT
@@ -42,6 +45,7 @@ def main():
 
     # 메인 루프
     while True:
+        global next_stage_active
         # 이벤트 처리
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
@@ -167,39 +171,51 @@ def main():
             b.draw()
         
          # ─── 보스 처치 완료 판정 ───
-        # boss_active가 True 이면서 boss 리스트가 비어 있으면
-        if boss_active and len(boss) == 0:
-            # 1) 보스 처치 단계 종료
+        if boss_active and len(boss) == 0 and not next_stage_active:
             boss_active = False
-            # 2) 스테이지 번호 1 증가
-            stage += 1
-            # 3) diff(난이도) 수치 1 증가
-            config.diffs(1)      # 또는 diff += 1 해도 되지만, config 내부 함수를 권장
-            # 4) 새로운 맵 생성 (diff가 바뀌면서 MAP_WIDTH/HEIGHT도 변경됨)
-            diff = config.itdiff()
-            MAP_HEIGHT = MAP_HEIGHT + 2
-            MAP_WIDTH = MAP_WIDTH + 2
-            map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = \
-                generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
-            debug.print_map_data(map_data, MAP_WIDTH, MAP_HEIGHT)
-            debug.print_room_connections(room_connections, MAP_WIDTH, MAP_HEIGHT)
-
-            # 5) 플레이어·적·보스 초기화
-            current_x, current_y = start_x, start_y
-            tilemap = map_data[(current_x, current_y)]
-            player.x, player.y = TILE_SIZE*4, TILE_SIZE*4 
-            
-            enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y, config.itdiff())
-            boss    = []  # 보스는 빈 리스트로 시작 (다음 보스 방 입장 시 생성)
-
-            # 6) 탐험 기록(미니맵) 초기화
-            explored_rooms = { (x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT) }
+            next_stage_active = True
+            # 보스방 중앙에 다음 스테이지 타일 설치
+            center = len(tilemap) // 2
+            tilemap[center][center] = config.next_stage  # config.next_stage 값(6)
+            next_stage_timer = None
+            # 탐험 상태 업데이트
             explored_rooms[(current_x, current_y)] = True
 
-        # 탐험 상태 업데이트
-        explored_rooms[(current_x, current_y)] = True
-
-        screen.fill(BLACK)
+            screen.fill(BLACK)
+        
+        if next_stage_active == True:
+            # 플레이어 중심 좌표로 타일 위치 계산
+            px = int((player.x + player.size/2) // TILE_SIZE)
+            py = int((player.y + player.size/2) // TILE_SIZE)
+            if 0 <= px < len(tilemap[0]) and 0 <= py < len(tilemap):
+                if tilemap[py][px] == config.next_stage:
+                    if next_stage_timer is None:
+                        next_stage_timer = time.time()
+                    elif time.time() - next_stage_timer >= 2:
+                        # 2초 이상 머물렀으면 스테이지 전환
+                        stage += 1
+                        config.diffs(1)
+                        # 맵 크기 증가
+                        MAP_HEIGHT = MAP_HEIGHT + 2
+                        MAP_WIDTH = MAP_WIDTH + 2
+                        # 새로운 맵 생성
+                        map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = \
+                            generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
+                        debug.print_map_data(map_data, MAP_WIDTH, MAP_HEIGHT)
+                        debug.print_room_connections(room_connections, MAP_WIDTH, MAP_HEIGHT)
+                        # 플레이어/적/보스 초기화 (원래 보스 kill 이후 로직)
+                        current_x, current_y = start_x, start_y
+                        tilemap = map_data[(current_x, current_y)]
+                        player.x, player.y = TILE_SIZE*4, TILE_SIZE*4
+                        enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y, config.itdiff())
+                        boss = []
+                        explored_rooms = { (x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT) }
+                        explored_rooms[(current_x, current_y)] = True
+                        next_stage_active = False
+                        next_stage_timer = None
+                else:
+                    # 타일에서 벗어나면 타이머 리셋
+                    next_stage_timer = None
 
         # 맵(타일)을 먼저 그린다
         draw_tilemap(tilemap)
@@ -213,8 +229,6 @@ def main():
         # 플레이어를 그린다 (플레이어가 적보다 위에 보이길 원하면 이 위치를 바꿔도 됩니다)
         player.draw()   
 
-        #공격 범위(디버그용)
-        player.draw_attack_range()
         # 미니맵 등 UI 요소를 마지막에 그린다
         minimap.draw_minimap(explored_rooms, current_x, current_y,
                              MAP_WIDTH, MAP_HEIGHT, len(enemies), room_connections)

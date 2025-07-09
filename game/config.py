@@ -17,9 +17,12 @@ VIOLET = (238, 130, 238)
 TILE_SIZE = 75
 
 # 불·가능 타일 정의
+item = 7
+next_stage = 6
 door               = 3
-walkable_tiles     = {0,3,4,5}
+walkable_tiles     = {0,3,4,5,6,7}
 non_walkable_tiles = {1,2}
+
 
 # 화면(surface)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
