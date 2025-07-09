@@ -64,7 +64,8 @@ def generate_grid_map(n, start, boss, branch_chance=(0.2 + 0.025*(config.itdiff(
 
     main_path = carve_main_path()
     # 분기 노드 리스트 초기화
-    sources = main_path.copy()
+    sources = [pos for pos in main_path if pos != (bx, by)]
+
 
     # 2) 분기 경로 확장
     dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
@@ -125,6 +126,8 @@ def generate_map_with_predefined_rooms(width, height):
             random.shuffle(dirs)
             for dx, dy in dirs:
                 nx, ny = px + dx, py + dy
+                if (nx, ny) == (bx, by):
+                    continue
                 if 0 <= nx < width and 0 <= ny < height and grid[ny][nx] == 0:
                     # 인접 충돌 검사
                     ok = True

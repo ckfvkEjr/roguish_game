@@ -14,7 +14,8 @@ class Entity:
         self.symbol = symbol
 
         if entity_type == "player":
-            self.hp               = 100
+            self.max_hp           = 20
+            self.hp               = self.max_hp
             self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*config.itdiff()
             self.color            = RED
             self.attack_speed     = 0.75 - 0.025*config.itdiff()
@@ -87,9 +88,8 @@ class Entity:
                 if other is not self and check_corner_collision(self, other):
                     ox = (self.get_rect().centerx - other.get_rect().centerx) / 2
                     oy = (self.get_rect().centery - other.get_rect().centery) / 2
-                    other.x += -ox * 0.1
-                    other.y += -oy * 0.1
-                    break
+                    self.x += ox * 0.1
+                    self.y += oy * 0.1
 
     def attack(self, player):
         now = time.time()

@@ -172,6 +172,8 @@ def main():
         
          # ─── 보스 처치 완료 판정 ───
         if boss_active and len(boss) == 0 and not next_stage_active:
+            print("보스 리스트 길이:", len(boss))
+            print("boss_active:", boss_active, "next_stage_active:", next_stage_active)
             boss_active = False
             next_stage_active = True
             # 보스방 중앙에 다음 스테이지 타일 설치
@@ -232,6 +234,26 @@ def main():
         # 미니맵 등 UI 요소를 마지막에 그린다
         minimap.draw_minimap(explored_rooms, current_x, current_y,
                              MAP_WIDTH, MAP_HEIGHT, len(enemies), room_connections)
+        
+                # ─── 플레이어 체력 UI 출력 ───
+        font = pygame.font.SysFont(None, 24)
+        hp_text = font.render(f"HP: {player.hp} / {player.max_hp}", True, (255, 255, 255))
+        # 체력바 위치 및 크기
+        bar_x = SCREEN_WIDTH - 240
+        bar_y = 50
+        bar_width = 200
+        bar_height = 20
+        hp_ratio = max(0, player.hp / player.max_hp)
+        
+        pygame.draw.rect(screen, BLACK, (bar_x - 10, bar_y - 30, bar_width + 20, bar_height + 40))
+
+        # 체력바 배경 + 전경
+        pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_width, bar_height))       # 배경
+        pygame.draw.rect(screen, (255, 0, 0), (bar_x, bar_y, bar_width * hp_ratio, bar_height))  # 빨간 체력바
+
+        # 수치 텍스트
+        screen.blit(hp_text, (bar_x + 60, bar_y - 25))
+
 
         # 화면 업데이트
         pygame.display.flip()

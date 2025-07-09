@@ -29,17 +29,17 @@ def check_corner_collision(entity1, entity2):
     return False
 
 def check_player_enemy_collision(player, enemies, tilemap):
-    """플레이어와 적이 충돌 시 서로 살짝 밀쳐냅니다."""
+    collided = False
     for enemy in enemies:
         if check_corner_collision(player, enemy):
             ox = (enemy.get_rect().centerx - player.get_rect().centerx) / 2
             oy = (enemy.get_rect().centery - player.get_rect().centery) / 2
-            if not check_tile_collision(enemy.x+ox, enemy.y, enemy.size, tilemap):
+            if not check_tile_collision(enemy.x + ox, enemy.y, enemy.size, tilemap):
                 enemy.x += ox * 0.1
-            if not check_tile_collision(enemy.x, enemy.y+oy, enemy.size, tilemap):
+            if not check_tile_collision(enemy.x, enemy.y + oy, enemy.size, tilemap):
                 enemy.y += oy * 0.1
-            return True
-    return False
+            collided = True
+    return collided
 
 def check_player_at_door(player, direction, tilemap, room_conns):
     """
