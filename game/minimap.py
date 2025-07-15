@@ -38,30 +38,31 @@ def draw_minimap(explored_rooms, current_x, current_y, width, height, texts, roo
                              (minimap_x + x*room_w,
                               minimap_y + y*room_h,
                               room_w, room_h))
+    
+    # 연결된 미탐험 방 (회색)
+    for x in range(width):
+        for y in range(height):
+            if explored_rooms.get((x, y), False):
+                continue
+            # 연결된 탐험된 방이 있는지 확인
+            neighbors = [ (x, y-1), (x, y+1), (x-1, y), (x+1, y) ]
+            for nx, ny in neighbors:
+                if 0 <= nx < width and 0 <= ny < height:
+                    if explored_rooms.get((nx, ny), False) and room_connections.get((nx, ny)):
+                        if room_connections[(nx, ny)].get("up")   and ny > y: break
+                        if room_connections[(nx, ny)].get("down") and ny < y: break
+                        if room_connections[(nx, ny)].get("left") and nx > x: break
+                        if room_connections[(nx, ny)].get("right")and nx < x: break
+            else:
+                continue  # break 안 됐으면 연결 없음
+            # 연결 있으면 회색 표시
+            pygame.draw.rect(screen, (100, 100, 100),
+                            (minimap_x + x*room_w,
+                            minimap_y + y*room_h,
+                            room_w, room_h))
 
     # 현재 방 강조
     pygame.draw.rect(screen, RED,
                      (minimap_x + current_x*room_w,
                       minimap_y + current_y*room_h,
                       room_w, room_h), 2)
-
-    # 연결선
-    for y in range(height):
-        for x in range(width):
-            if not explored_rooms.get((x,y), False):
-                continue
-            cx = minimap_x + (x+0.5)*room_w
-            cy = minimap_y + (y+0.5)*room_h
-            conn = room_connections.get((x,y), {})
-            if conn.get("up")   and explored_rooms.get((x, y-1), False):
-                pygame.draw.line(screen, GREEN, (cx, cy),
-                                 (cx, minimap_y+(y-1+0.5)*room_h), 2)
-            if conn.get("down") and explored_rooms.get((x, y+1), False):
-                pygame.draw.line(screen, GREEN, (cx, cy),
-                                 (cx, minimap_y+(y+1+0.5)*room_h), 2)
-            if conn.get("left") and explored_rooms.get((x-1, y), False):
-                pygame.draw.line(screen, GREEN, (cx, cy),
-                                 (minimap_x+(x-1+0.5)*room_w, cy), 2)
-            if conn.get("right")and explored_rooms.get((x+1, y), False):
-                pygame.draw.line(screen, GREEN, (cx, cy),
-                                 (minimap_x+(x+1+0.5)*room_w, cy), 2)

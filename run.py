@@ -20,6 +20,7 @@ stage = 1           # 현재 스테이지 (1부터 시작)
 boss_active = False # 보스 방 입장 후 처치 대기 중인지 여부
 next_stage_active = False        # 추가: 다음 스테이지 타일 활성화 플래그
 next_stage_timer = None         # 추가: 타이머 시작 시간
+game_over = False
 
 def main():
     global boss_active, stage, MAP_WIDTH, MAP_HEIGHT
@@ -46,6 +47,8 @@ def main():
     # 메인 루프
     while True:
         global next_stage_active
+        global game_over
+        screen.fill(BLACK)
         # 이벤트 처리
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
@@ -135,6 +138,7 @@ def main():
                         boss_active = True
                         enemies = []
 
+
         # 플레이어 이동
         new_x, new_y = player.x, player.y
         if keys[pygame.K_LEFT]:
@@ -218,6 +222,9 @@ def main():
                 else:
                     # 타일에서 벗어나면 타이머 리셋
                     next_stage_timer = None
+        
+        if player.hp <= 0:
+            game_over = True
 
         # 맵(타일)을 먼저 그린다
         draw_tilemap(tilemap)
@@ -230,6 +237,33 @@ def main():
 
         # 플레이어를 그린다 (플레이어가 적보다 위에 보이길 원하면 이 위치를 바꿔도 됩니다)
         player.draw()   
+
+        if game_over:
+            screen.fill(BLACK)
+            # 게임 오버 텍스트 출력
+            font = pygame.font.SysFont(None, 48)
+            msg = font.render("GAME OVER - Press R to Restart", True, (255, 255, 255))
+            screen.blit(msg, (SCREEN_WIDTH//2 - msg.get_width()//2, SCREEN_HEIGHT//2))
+            player.hp = 0
+            enemies = []
+            boss = []
+            # R 키 입력 시 초기화
+            if keys[pygame.K_r]:
+                stage = 1
+                config.reset_diff()
+                MAP_WIDTH = 9
+                MAP_HEIGHT = 9
+                map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
+                current_x, current_y = start_x, start_y
+                tilemap = map_data[(current_x, current_y)]
+                player = Entity(TILE_SIZE*4.5, TILE_SIZE*4.5, '@', entity_type="player")
+                enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y, config.itdiff())
+                boss = []
+                explored_rooms = {(x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT)}
+                explored_rooms[(start_x, start_y)] = True
+                game_over = False
+                next_stage_active = False
+                next_stage_timer = None
 
         # 미니맵 등 UI 요소를 마지막에 그린다
         minimap.draw_minimap(explored_rooms, current_x, current_y,
