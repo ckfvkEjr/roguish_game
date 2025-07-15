@@ -10,10 +10,12 @@ from game.map_tools import (
     draw_tilemap,
     move_to_next_room,
     generate_enemies_for_room,
-    generate_boss_for_room
+    generate_boss_for_room,
+    generate_items_for_room
 )
 from game.entity import Entity
 from game.collision import check_tile_collision, check_player_enemy_collision
+from game.itemset import item_types
 
     # ─── 전역 상태 관리 변수 ───
 stage = 1           # 현재 스테이지 (1부터 시작)
@@ -21,7 +23,8 @@ boss_active = False # 보스 방 입장 후 처치 대기 중인지 여부
 next_stage_active = False        # 추가: 다음 스테이지 타일 활성화 플래그
 next_stage_timer = None         # 추가: 타이머 시작 시간
 game_over = False
-
+items = []
+room_items = {}
 def main():
     global boss_active, stage, MAP_WIDTH, MAP_HEIGHT
     # 초기화
@@ -48,6 +51,8 @@ def main():
     while True:
         global next_stage_active
         global game_over
+        global items
+        global room_items
         screen.fill(BLACK)
         # 이벤트 처리
         for ev in pygame.event.get():
@@ -76,6 +81,9 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
+                    if (nx, ny) not in room_items:
+                        room_items[(nx, ny)] = generate_items_for_room(tilemap)
+                        items = room_items[(nx, ny)]
                     # ─── 보스 방 입장 시 보스 생성 + boss_active 활성화 ───
                     if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
                         print('보스 생성!')
@@ -96,6 +104,9 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
+                    if (nx, ny) not in room_items:
+                        room_items[(nx, ny)] = generate_items_for_room(tilemap)
+                        items = room_items[(nx, ny)]
                     if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
                         boss = generate_boss_for_room(tilemap, config.itdiff())
                         boss_active = True
@@ -114,6 +125,9 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
+                    if (nx, ny) not in room_items:
+                        room_items[(nx, ny)] = generate_items_for_room(tilemap)
+                        items = room_items[(nx, ny)]
                     if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
                         print('보스 생성!')
                         boss = generate_boss_for_room(tilemap, config.itdiff())
@@ -133,11 +147,13 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
+                    if (nx, ny) not in room_items:
+                        room_items[(nx, ny)] = generate_items_for_room(tilemap)
+                        items = room_items[(nx, ny)]
                     if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
                         boss = generate_boss_for_room(tilemap, config.itdiff())
                         boss_active = True
                         enemies = []
-
 
         # 플레이어 이동
         new_x, new_y = player.x, player.y
@@ -237,6 +253,9 @@ def main():
 
         # 플레이어를 그린다 (플레이어가 적보다 위에 보이길 원하면 이 위치를 바꿔도 됩니다)
         player.draw()   
+        print("[debug] items:", items)  
+        for item in items:
+            item.draw
 
         if game_over:
             screen.fill(BLACK)

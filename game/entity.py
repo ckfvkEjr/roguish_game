@@ -6,13 +6,14 @@ import time
 from game.config import TILE_SIZE, RED, BLACK, diff, enemy_types, boss_types
 from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
+import game.itemset as itemset
 
 class Entity:
     def __init__(self, x, y, symbol, entity_type="player"):
         self.x = x
         self.y = y
         self.symbol = symbol
-
+        self.entity_type = entity_type
         if entity_type == "player":
             self.max_hp           = 20
             self.hp               = self.max_hp
@@ -20,6 +21,7 @@ class Entity:
             self.color            = RED
             self.attack_speed     = 0.75 - 0.025*config.itdiff()
             self.damage           = 5
+            self.atack_range = 1
             self.size             = TILE_SIZE * 0.25
             self.last_damage_time = 0
             self.last_attack_time = 0
@@ -33,6 +35,8 @@ class Entity:
             self.damage           = attrs["damage"]
             self.size             = attrs["size"]
             self.last_attack_time = 0
+        elif entity_type == "item":
+            self.entity_type = 'item'
         else:
             attrs = enemy_types(config.itdiff()).get(entity_type, enemy_types(config.itdiff())["a"])
             self.hp               = attrs["hp"]
@@ -44,14 +48,20 @@ class Entity:
             self.last_attack_time = 0
 
     def draw(self):
-        pygame.draw.rect(pygame.display.get_surface(), self.color,
-                         (self.x, self.y, self.size, self.size))
+        screen = pygame.display.get_surface()
+        if  self.entity_type == "item":
+            pygame.draw.rect(screen, BLACK, (self.x, self.y, self.size, self.size))
+            return
+
+        pygame.draw.rect(screen, self.color, (self.x, self.y, self.size, self.size))
+
         if self.symbol != '@':
             font = pygame.font.SysFont(None, 24)
             hp_text = font.render(f"{self.hp}", True, BLACK)
             tx = self.x + self.size/2 - hp_text.get_width()/2
             ty = self.y - 15
-            pygame.display.get_surface().blit(hp_text, (tx, ty))
+            screen.blit(hp_text, (tx, ty))
+
 
     def draw_attack_range(self):
         # (선택) 공격 범위 원을 그립니다. 디버그용으로만 사용하세요.

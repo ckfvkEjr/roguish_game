@@ -9,6 +9,7 @@ from game.config import TILE_SIZE, walkable_tiles, door, diff, BLUE, BLACK, VIOL
 import game.config as config
 from game.mapset import predefined_rooms, start_rooms, boss_room, Item_room, sp2_room
 from game.entity import Entity
+from game.itemset import item_types
 
 def add_doors_to_room(room, connections):
     """
@@ -117,32 +118,43 @@ def generate_map_with_predefined_rooms(width, height):
 
     # 3) 메인 경로 브런치에서 특수방 좌표 생성
     dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-    candidates = [pos for pos in main_path if pos not in [(sx, sy), (bx, by)]]
+    # 시작/보스 제외한 전체 grid=1 영역 중 후보 선택
+    candidates = [(x, y)
+                  for y in range(height)
+                  for x in range(width)
+                  if grid[y][x] == 1 and (x, y) not in [(sx, sy), (bx, by)]]
+
     random.shuffle(candidates)
     special_coords = {}
     # 아이템방과 sp2방 순서대로 생성
     for name, layout_dict in [('item', Item_room), ('sp2', sp2_room)]:
-        for px, py in candidates:
-            random.shuffle(dirs)
-            for dx, dy in dirs:
-                nx, ny = px + dx, py + dy
-                if (nx, ny) == (bx, by):
-                    continue
-                if 0 <= nx < width and 0 <= ny < height and grid[ny][nx] == 0:
-                    # 인접 충돌 검사
-                    ok = True
-                    for ddx, ddy in dirs:
-                        ax, ay = nx + ddx, ny + ddy
-                        if (ax, ay) != (px, py) and 0 <= ax < width and 0 <= ay < height and grid[ay][ax] == 1:
-                            ok = False
-                            break
-                    if not ok:
-                        continue
-                    grid[ny][nx] = 1
-                    special_coords[name] = (nx, ny)
+        placed = False
+        attempt = 0
+        while not placed and attempt < 100:
+            attempt += 1
+            random.shuffle(candidates)
+            for px, py in candidates:
+                random.shuffle(dirs)
+                for dx, dy in dirs:
+                    nx, ny = px + dx, py + dy
+                    if 0 <= nx < width and 0 <= ny < height and grid[ny][nx] == 0:
+                        # 인접 충돌 방지
+                        ok = True
+                        for ddx, ddy in dirs:
+                            ax, ay = nx + ddx, ny + ddy
+                            if (ax, ay) != (px, py) and 0 <= ax < width and 0 <= ay < height and grid[ay][ax] == 1:
+                                ok = False
+                                break
+                        if not ok:
+                            continue
+                        grid[ny][nx] = 1
+                        special_coords[name] = (nx, ny)
+                        placed = True
+                        break
+                if placed:
                     break
-            if name in special_coords:
-                break
+        if not placed:
+            print(f"[경고] 특수방 '{name}' 생성 실패")
 
     # 4) 방 연결 정보 생성
     room_connections = {}
@@ -262,6 +274,27 @@ def draw_tilemap(tilemap):
                 color = WHITE
             pygame.draw.rect(screen, color, (x, y, TILE_SIZE, TILE_SIZE))
 
+def generate_items_for_room(tilemap):
+    items = []
+    possible = []
+    
+    for r in range(len(tilemap)):
+        for c in range(len(tilemap[r])):
+            if tilemap[r][c] == config.item:
+                possible.append((c, r))
+
+    if possible:
+        cx, cy = random.choice(possible)
+        it_key = random.choice(list(item_types.keys()))
+        ent = Entity(cx * TILE_SIZE, cy * TILE_SIZE, it_key, entity_type="item")
+        items.append(ent)
+        print('item 생성!')
+        print(f"[아이템 생성 후보 수]: {len(possible)}")
+        print(f"[선택된 타일 좌표]: {cx}, {cy}")
+        print(f"[선택된 아이템 키]: {it_key}")
+        print(f"[생성된 아이템]: {ent}")
+    return items
+
 def move_to_next_room(direction, player,
                       current_x, current_y,
                       map_data, room_connections,
@@ -326,3 +359,4 @@ def move_to_next_room(direction, player,
     explored_rooms[(new_x, new_y)] = True
 
     return new_x, new_y, new_tilemap, new_enemies
+
