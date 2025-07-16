@@ -25,6 +25,33 @@ next_stage_timer = None         # 추가: 타이머 시작 시간
 game_over = False
 items = []
 room_items = {}
+
+def apply_item_effect(player, item_data):
+    if item_data.get("hp") is not None:
+        player.hp = min(player.hp + item_data["hp"], player.max_hp)
+    if item_data.get("max_hp") is not None:
+        player.max_hp += item_data["max_hp"]
+        player.hp = min(player.hp, player.max_hp)
+    if item_data.get("speed") is not None:
+        player.speed += item_data["speed"]
+    if item_data.get("attack_speed") is not None:
+        player.attack_speed += item_data["attack_speed"]
+    if item_data.get("damage") is not None:
+        player.damage += item_data["damage"]
+    if item_data.get("size") is not None:
+        player.size += item_data["size"]
+
+def check_collision(player, item):
+    item_x = item.x + TILE_SIZE * 0.5 - item.size * 0.5
+    item_y = item.y + TILE_SIZE * 0.5 - item.size * 0.5
+
+    return (
+        player.x < item_x + item.size and
+        player.x + player.size > item_x and
+        player.y < item_y + item.size and
+        player.y + player.size > item_y
+    )
+
 def main():
     global boss_active, stage, MAP_WIDTH, MAP_HEIGHT
     # 초기화
@@ -67,7 +94,7 @@ def main():
         keys = pygame.key.get_pressed()
 
         # 방 이동 처리 (적이 모두 사라졌을 때만)
-        if len(enemies) == 0:
+        if len(enemies) == 0 and len(boss) == 0:
             if keys[pygame.K_UP]:
                 nx, ny, new_tilemap, new_enemies = move_to_next_room(
                     "up", player,
@@ -235,6 +262,7 @@ def main():
                         explored_rooms[(current_x, current_y)] = True
                         next_stage_active = False
                         next_stage_timer = None
+
                 else:
                     # 타일에서 벗어나면 타이머 리셋
                     next_stage_timer = None
@@ -252,10 +280,19 @@ def main():
             b.draw()
 
         # 플레이어를 그린다 (플레이어가 적보다 위에 보이길 원하면 이 위치를 바꿔도 됩니다)
-        player.draw()   
-        print("[debug] items:", items)  
-        for item in items:
-            item.draw
+        player.draw()
+
+        current_items = room_items.get((current_x, current_y), [])
+        for item in current_items[:]:  # 복사본 반복
+            if check_collision(player, item):
+                from game.itemset import item_types
+                item_data = item_types.get(item.symbol, {})
+                apply_item_effect(player, item_data)
+                current_items.remove(item)
+                break  # 1개만 처리   
+        
+        for item in room_items.get((current_x, current_y), []):
+            item.draw()
 
         if game_over:
             screen.fill(BLACK)

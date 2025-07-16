@@ -20,7 +20,7 @@ class Entity:
             self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*config.itdiff()
             self.color            = RED
             self.attack_speed     = 0.75 - 0.025*config.itdiff()
-            self.damage           = 5
+            self.damage           = 100
             self.atack_range = 1
             self.size             = TILE_SIZE * 0.25
             self.last_damage_time = 0
@@ -37,6 +37,8 @@ class Entity:
             self.last_attack_time = 0
         elif entity_type == "item":
             self.entity_type = 'item'
+            self.size = TILE_SIZE * 0.2
+            self.color = BLACK
         else:
             attrs = enemy_types(config.itdiff()).get(entity_type, enemy_types(config.itdiff())["a"])
             self.hp               = attrs["hp"]
@@ -50,7 +52,8 @@ class Entity:
     def draw(self):
         screen = pygame.display.get_surface()
         if  self.entity_type == "item":
-            pygame.draw.rect(screen, BLACK, (self.x, self.y, self.size, self.size))
+            pygame.draw.rect(screen, BLACK, (self.x + TILE_SIZE*0.5 - self.size*0.5, self.y+ TILE_SIZE*0.5 - self.size*0.5, self.size, self.size))
+
             return
 
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.size, self.size))
