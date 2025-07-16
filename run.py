@@ -266,7 +266,10 @@ def main():
                 else:
                     # 타일에서 벗어나면 타이머 리셋
                     next_stage_timer = None
-        
+        if (current_x, current_y) == (start_x, start_y) and tilemap[4][4] != 0:
+            tilemap[4][4] = 0
+            print("시작방!")
+
         if player.hp <= 0:
             game_over = True
 
