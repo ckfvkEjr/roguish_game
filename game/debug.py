@@ -2,7 +2,6 @@ def print_map_data(map_data, width, height):
     print("Generated Map:")
     for y in range(height):
         for x in range(width):
-            # 만약 (x,y)에 방이 없으면 건너뛰기
             if (x, y) not in map_data:
                 continue
 
@@ -17,7 +16,6 @@ def print_room_connections(connections, width, height):
     print("Room Connections:")
     for y in range(height):
         for x in range(width):
-            # 방이 없는 좌표는 건너뛰기
             if (x, y) not in connections:
                 continue
 

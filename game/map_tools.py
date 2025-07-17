@@ -1,11 +1,9 @@
 # game/map_tools.py
 
 import random
-from collections import deque
 import pygame
-import math
-import time
-from game.config import TILE_SIZE, walkable_tiles, door, diff, BLUE, BLACK, VIOLET, WHITE, GREEN, YELLOW, item
+import copy
+from game.config import TILE_SIZE, door, BLUE, BLACK, VIOLET, WHITE
 import game.config as config
 from game.mapset import predefined_rooms, start_rooms, boss_room, Item_room, sp2_room
 from game.entity import Entity
@@ -150,6 +148,7 @@ def generate_map_with_predefined_rooms(width, height):
                         grid[ny][nx] = 1
                         special_coords[name] = (nx, ny)
                         placed = True
+                        print(f"[아이템방 좌표]: {special_coords.get('item')}")
                         break
                 if placed:
                     break
@@ -181,11 +180,12 @@ def generate_map_with_predefined_rooms(width, height):
             base = random.choice(list(sp2_room.values()))
         else:
             base = random.choice(list(predefined_rooms.values()))
-        room = [row.copy() for row in base]
+        room = copy.deepcopy(base)
         room = add_doors_to_room(room, conns)
         map_data[(x, y)] = room
 
     return map_data, room_connections, (sx, sy), (bx, by)
+
 
 def check_player_at_door(player, direction, tilemap, room_conns):
     """
@@ -201,7 +201,7 @@ def check_player_at_door(player, direction, tilemap, room_conns):
         return True
     return False
 
-from game.collision import check_tile_collision, check_corner_collision, check_player_enemy_collision, check_player_at_door
+from game.collision import check_player_at_door
 
 def generate_enemies_for_room(tilemap, room_x, room_y, start_x, start_y, diff):
     """

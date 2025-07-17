@@ -13,29 +13,29 @@ from game.map_tools import (
     generate_boss_for_room,
     generate_items_for_room
 )
-from game.entity import Entity
+from game.entity import Entity, draw_attack_area
 from game.collision import check_tile_collision, check_player_enemy_collision
-from game.itemset import item_types
 
-    # ─── 전역 상태 관리 변수 ───
-stage = 1           # 현재 스테이지 (1부터 시작)
-boss_active = False # 보스 방 입장 후 처치 대기 중인지 여부
-next_stage_active = False        # 추가: 다음 스테이지 타일 활성화 플래그
-next_stage_timer = None         # 추가: 타이머 시작 시간
+stage = 1           
+boss_active = False 
+next_stage_active = False       
+next_stage_timer = None         
 game_over = False
 items = []
 room_items = {}
 
 def apply_item_effect(player, item_data):
-    if item_data.get("hp") is not None:
-        player.hp = min(player.hp + item_data["hp"], player.max_hp)
     if item_data.get("max_hp") is not None:
         player.max_hp += item_data["max_hp"]
+    if item_data.get("hp") is not None:
+        player.hp = min(player.hp + item_data["hp"], player.max_hp)
         player.hp = min(player.hp, player.max_hp)
     if item_data.get("speed") is not None:
         player.speed += item_data["speed"]
     if item_data.get("attack_speed") is not None:
         player.attack_speed += item_data["attack_speed"]
+    if item_data.get("attack_range") is not None:
+        player.attack_range += item_data["attack_range"]
     if item_data.get("damage") is not None:
         player.damage += item_data["damage"]
     if item_data.get("size") is not None:
@@ -186,12 +186,16 @@ def main():
         new_x, new_y = player.x, player.y
         if keys[pygame.K_LEFT]:
             new_x -= player.speed
+            player.last_direction = "left"
         if keys[pygame.K_RIGHT]:
             new_x += player.speed
+            player.last_direction = "right"
         if keys[pygame.K_UP]:
             new_y -= player.speed
+            player.last_direction = "up"
         if keys[pygame.K_DOWN]:
             new_y += player.speed
+            player.last_direction = "down"
 
         # 충돌 검사 + 적 충돌 시스템 더해야 함 적,벽 / 
         if not check_tile_collision(new_x, player.y, player.size, tilemap) and            not check_player_enemy_collision(player, enemies + boss, tilemap):
@@ -202,6 +206,7 @@ def main():
         # 공격 처리
         if keys[pygame.K_SPACE]:
             player.attack_enemies(enemies, boss)
+            
         
         # 적 행동
         for enemy in enemies:
@@ -225,7 +230,7 @@ def main():
             next_stage_active = True
             # 보스방 중앙에 다음 스테이지 타일 설치
             center = len(tilemap) // 2
-            tilemap[center][center] = config.next_stage  # config.next_stage 값(6)
+            map_data[boss_x, boss_y][center][center] = 6  # config.next_stage 값(6)
             next_stage_timer = None
             # 탐험 상태 업데이트
             explored_rooms[(current_x, current_y)] = True
@@ -284,6 +289,9 @@ def main():
 
         # 플레이어를 그린다 (플레이어가 적보다 위에 보이길 원하면 이 위치를 바꿔도 됩니다)
         player.draw()
+        
+        if keys[pygame.K_SPACE]:
+            draw_attack_area(player)
 
         current_items = room_items.get((current_x, current_y), [])
         for item in current_items[:]:  # 복사본 반복

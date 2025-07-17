@@ -3,10 +3,9 @@
 import pygame
 import math
 import time
-from game.config import TILE_SIZE, RED, BLACK, diff, enemy_types, boss_types
+from game.config import TILE_SIZE, RED, BLACK, enemy_types, boss_types, YELLOW
 from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
-import game.itemset as itemset
 
 class Entity:
     def __init__(self, x, y, symbol, entity_type="player"):
@@ -21,7 +20,7 @@ class Entity:
             self.color            = RED
             self.attack_speed     = 0.75 - 0.025*config.itdiff()
             self.damage           = 100
-            self.atack_range = 1
+            self.attack_range = 1
             self.size             = TILE_SIZE * 0.25
             self.last_damage_time = 0
             self.last_attack_time = 0
@@ -114,40 +113,98 @@ class Entity:
             self.last_attack_time = now
 
     def attack_enemies(self, enemies, bosses=None):
-        """
-        플레이어가 적(enemies)과 보스(bosses)를 공격할 때 호출합니다.
-        - 공격 속도(self.attack_speed) 쿨타임을 지켜서 발동
-        - 공격 범위 = TILE_SIZE 이내에서 가장 먼저 만난 대상 하나에만 데미지
-        - hp <= 0이 되면, 해당 원본 리스트에서 제거
-        """
         now = time.time()
         if now - self.last_attack_time < self.attack_speed:
             return
 
-        # 공격 대상 후보 합치기
+        attack_range = self.attack_range * TILE_SIZE
+        attack_width = TILE_SIZE * 0.8  # 사각형 너비 (좌우 허용 범위)
+        px = self.x + self.size / 2
+        py = self.y + self.size / 2
+
         targets = []
         if enemies:
             targets.extend(enemies)
         if bosses:
             targets.extend(bosses)
 
-        # 플레이어 중심 좌표
-        cx = self.x + self.size / 2
-        cy = self.y + self.size / 2
+        for target in targets:
+            
+            ex = target.x + target.size / 2
+            ey = target.y + target.size / 2
 
-        for enemy in targets:
-            ex = enemy.x + enemy.size / 2
-            ey = enemy.y + enemy.size / 2
-            dist = math.hypot(ex - cx, ey - cy)
-            if dist <= TILE_SIZE:
-                # 데미지 적용
-                enemy.hp -= self.damage
-                self.last_attack_time = now
+            in_range = False
 
-                # 적 사망 시 실제 원본 리스트에서 제거
-                if enemy.hp <= 0:
-                    if enemies and enemy in enemies:
-                        enemies.remove(enemy)
-                    elif bosses and enemy in bosses:
-                        bosses.remove(enemy)
-                break
+            if self.last_direction == "up":
+                if (abs(ex - px) <= attack_width / 2 and
+                    py - attack_range <= ey < py):
+                    in_range = True
+            elif self.last_direction == "down":
+                if (abs(ex - px) <= attack_width / 2 and
+                    py < ey <= py + attack_range):
+                    in_range = True
+            elif self.last_direction == "left":
+                if (abs(ey - py) <= attack_width / 2 and
+                    px - attack_range <= ex < px):
+                    in_range = True
+            elif self.last_direction == "right":
+                if (abs(ey - py) <= attack_width / 2 and
+                    px < ex <= px + attack_range):
+                    in_range = True
+
+            if in_range:
+                target.hp -= self.damage
+                print(f"[공격] {target.symbol}에게 {self.damage} 데미지")
+                self.last_attack_time = now  # 타격했을 때만 쿨타임 초기화
+
+        # 죽은 적 제거
+        if enemies:
+            enemies[:] = [e for e in enemies if e.hp > 0]
+        if bosses:
+            bosses[:] = [b for b in bosses if b.hp > 0]
+
+
+def draw_attack_area(self):
+    """플레이어의 전방 공격 범위를 시각적으로 사각형으로 표시합니다."""
+    if self.entity_type != "player":
+        return
+
+    attack_range = self.attack_range * TILE_SIZE
+    attack_width = TILE_SIZE * 0.8
+    px = self.x + self.size / 2
+    py = self.y + self.size / 2
+
+    screen = pygame.display.get_surface()
+
+    if self.last_direction == "up":
+        rect = pygame.Rect(
+            px - attack_width/2,
+            py - attack_range,
+            attack_width,
+            attack_range
+        )
+    elif self.last_direction == "down":
+        rect = pygame.Rect(
+            px - attack_width/2,
+            py,
+            attack_width,
+            attack_range
+        )
+    elif self.last_direction == "left":
+        rect = pygame.Rect(
+            px - attack_range,
+            py - attack_width/2,
+            attack_range,
+            attack_width
+        )
+    elif self.last_direction == "right":
+        rect = pygame.Rect(
+            px,
+            py - attack_width/2,
+            attack_range,
+            attack_width
+        )
+    else:
+        return
+
+    pygame.draw.rect(screen, YELLOW, rect, 2)

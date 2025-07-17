@@ -1,6 +1,3 @@
-# game/collision.py
-
-import pygame
 from game.config import TILE_SIZE, walkable_tiles, door
 
 def check_tile_collision(x, y, size, tilemap):
