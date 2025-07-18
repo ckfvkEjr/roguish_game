@@ -4,7 +4,7 @@ import pygame
 from game.config import *
 import game.config as config
 
-def draw_minimap(explored_rooms, current_x, current_y, width, height, texts, room_connections):
+def draw_minimap(explored_rooms, current_x, current_y, width, height, texts, room_connections, boss_X, boss_y):
     global diff
     minimap_size = (TILE_SIZE/50)*125
     minimap_x = SCREEN_WIDTH - minimap_size - 10
@@ -34,7 +34,8 @@ def draw_minimap(explored_rooms, current_x, current_y, width, height, texts, roo
     # 탐험된 방
     for (x,y), seen in explored_rooms.items():
         if seen:
-            pygame.draw.rect(screen, WHITE,
+            color = VIOLET if (x,y) == (boss_X, boss_y) else WHITE
+            pygame.draw.rect(screen, color,
                              (minimap_x + x*room_w,
                               minimap_y + y*room_h,
                               room_w, room_h))

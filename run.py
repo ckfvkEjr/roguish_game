@@ -334,7 +334,7 @@ def main():
 
         # 미니맵 등 UI 요소를 마지막에 그린다
         minimap.draw_minimap(explored_rooms, current_x, current_y,
-                             MAP_WIDTH, MAP_HEIGHT, len(enemies), room_connections)
+                             MAP_WIDTH, MAP_HEIGHT, len(enemies), room_connections, boss_x, boss_y)
         
                 # ─── 플레이어 체력 UI 출력 ───
         font = pygame.font.SysFont(None, 24)
