@@ -184,7 +184,7 @@ def generate_map_with_predefined_rooms(width, height):
         room = add_doors_to_room(room, conns)
         map_data[(x, y)] = room
 
-    return map_data, room_connections, (sx, sy), (bx, by)
+    return map_data, room_connections, (sx, sy), (bx, by), special_coords
 
 
 def check_player_at_door(player, direction, tilemap, room_conns):

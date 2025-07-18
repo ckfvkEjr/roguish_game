@@ -14,7 +14,7 @@ class Entity:
         self.symbol = symbol
         self.entity_type = entity_type
         if entity_type == "player":
-            self.max_hp           = 20
+            self.max_hp           = 1000000000000
             self.hp               = self.max_hp
             self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*config.itdiff()
             self.color            = RED

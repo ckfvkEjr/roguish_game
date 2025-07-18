@@ -23,6 +23,7 @@ next_stage_timer = None
 game_over = False
 items = []
 room_items = {}
+room_first_visit = {}
 
 def apply_item_effect(player, item_data):
     if item_data.get("max_hp") is not None:
@@ -61,7 +62,7 @@ def main():
     clock = pygame.time.Clock()
 
     # 맵 생성
-    map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
+    map_data, room_connections, (start_x, start_y), (boss_x, boss_y), special_coords = generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
     debug.print_map_data(map_data, MAP_WIDTH, MAP_HEIGHT)
     debug.print_room_connections(room_connections, MAP_WIDTH, MAP_HEIGHT)
 
@@ -80,6 +81,7 @@ def main():
         global game_over
         global items
         global room_items
+        global room_first_visit
         screen.fill(BLACK)
         # 이벤트 처리
         for ev in pygame.event.get():
@@ -108,15 +110,23 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
-                    if (nx, ny) not in room_items:
-                        room_items[(nx, ny)] = generate_items_for_room(tilemap)
-                        items = room_items[(nx, ny)]
-                    # ─── 보스 방 입장 시 보스 생성 + boss_active 활성화 ───
-                    if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
-                        print('보스 생성!')
-                        boss = generate_boss_for_room(tilemap, config.itdiff())
-                        boss_active = True
-                        enemies = []
+                    if (current_x, current_y) not in room_first_visit:
+                        room_first_visit[(current_x, current_y)] = True
+                    if room_first_visit.get((current_x, current_y), False):
+                        if any(7 in row for row in tilemap):
+                            if not room_items.get((current_y, current_y)):
+                                generated = generate_items_for_room(tilemap)
+                                if generated:
+                                    room_items[(current_x, current_y)] = generated
+                                    items = generated
+                                    room_first_visit[(current_x, current_y)] = False
+                                    print("아이템 생성!")
+                        if not boss and any(5 in row for row in tilemap):
+                            print("[1회 방문] 보스 생성 시작")
+                            boss = generate_boss_for_room(tilemap, config.itdiff())
+                            boss_active = True
+                            enemies = []
+                            room_first_visit[(current_x, current_y)] = False
 
             elif keys[pygame.K_DOWN]:
                 nx, ny, new_tilemap, new_enemies = move_to_next_room(
@@ -131,14 +141,24 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
-                    if (nx, ny) not in room_items:
-                        room_items[(nx, ny)] = generate_items_for_room(tilemap)
-                        items = room_items[(nx, ny)]
-                    if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
-                        boss = generate_boss_for_room(tilemap, config.itdiff())
-                        boss_active = True
-                        enemies = []
-
+                    if (current_x, current_y) not in room_first_visit:
+                        room_first_visit[(current_x, current_y)] = True
+                    if room_first_visit.get((current_x, current_y), False):
+                        if any(7 in row for row in tilemap):
+                            if not room_items.get((current_y, current_y)):
+                                generated = generate_items_for_room(tilemap)
+                                if generated:
+                                    room_items[(current_x, current_y)] = generated
+                                    items = generated
+                                    room_first_visit[(current_x, current_y)] = False
+                                    print("아이템 생성!")
+                        if not boss and any(5 in row for row in tilemap):
+                            print("[1회 방문] 보스 생성 시작")
+                            boss = generate_boss_for_room(tilemap, config.itdiff())
+                            boss_active = True
+                            enemies = []
+                            room_first_visit[(current_x, current_y)] = False
+                    
             elif keys[pygame.K_LEFT]:
                 nx, ny, new_tilemap, new_enemies = move_to_next_room(
                     "left", player,
@@ -152,14 +172,23 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
-                    if (nx, ny) not in room_items:
-                        room_items[(nx, ny)] = generate_items_for_room(tilemap)
-                        items = room_items[(nx, ny)]
-                    if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
-                        print('보스 생성!')
-                        boss = generate_boss_for_room(tilemap, config.itdiff())
-                        boss_active = True
-                        enemies = []
+                    if (current_x, current_y) not in room_first_visit:
+                        room_first_visit[(current_x, current_y)] = True
+                    if room_first_visit.get((current_x, current_y), False):
+                        if any(7 in row for row in tilemap):
+                            if not room_items.get((current_y, current_y)):
+                                generated = generate_items_for_room(tilemap)
+                                if generated:
+                                    room_items[(current_x, current_y)] = generated
+                                    items = generated
+                                    room_first_visit[(current_x, current_y)] = False
+                                    print("아이템 생성!")
+                        if not boss and any(5 in row for row in tilemap):
+                            print("[1회 방문] 보스 생성 시작")
+                            boss = generate_boss_for_room(tilemap, config.itdiff())
+                            boss_active = True
+                            enemies = []
+                            room_first_visit[(current_x, current_y)] = False
 
             elif keys[pygame.K_RIGHT]:
                 nx, ny, new_tilemap, new_enemies = move_to_next_room(
@@ -174,15 +203,74 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
-                    if (nx, ny) not in room_items:
-                        room_items[(nx, ny)] = generate_items_for_room(tilemap)
-                        items = room_items[(nx, ny)]
-                    if (current_x, current_y) == (boss_x, boss_y) and not boss_active:
-                        boss = generate_boss_for_room(tilemap, config.itdiff())
-                        boss_active = True
-                        enemies = []
+                    if (current_x, current_y) not in room_first_visit:
+                        room_first_visit[(current_x, current_y)] = True
+                    if room_first_visit.get((current_x, current_y), False):
+                        if any(7 in row for row in tilemap):
+                            if not room_items.get((current_y, current_y)):
+                                generated = generate_items_for_room(tilemap)
+                                if generated:
+                                    room_items[(current_x, current_y)] = generated
+                                    items = generated
+                                    room_first_visit[(current_x, current_y)] = False
+                                    print("아이템 생성!")
+                        if not boss and any(5 in row for row in tilemap):
+                            print("[1회 방문] 보스 생성 시작")
+                            boss = generate_boss_for_room(tilemap, config.itdiff())
+                            boss_active = True
+                            enemies = []
+                            room_first_visit[(current_x, current_y)] = False
 
-        # 플레이어 이동
+            elif keys[pygame.K_b]  :
+                print("b 누름")
+                current_x, current_y = boss_x, boss_y
+                tilemap = map_data[(boss_x, boss_y)]
+                explored_rooms[(boss_x, boss_y)] = True           
+                draw_tilemap(tilemap)
+
+                if (current_x, current_y) not in room_first_visit:
+                    room_first_visit[(current_x, current_y)] = True
+                    if room_first_visit.get((current_x, current_y), False):
+                        if any(7 in row for row in tilemap):
+                            if not room_items.get((current_y, current_y)):
+                                generated = generate_items_for_room(tilemap)
+                                if generated:
+                                    room_items[(current_x, current_y)] = generated
+                                    items = generated
+                                    room_first_visit[(current_x, current_y)] = False
+                                    print("아이템 생성!")
+                        if not boss and any(5 in row for row in tilemap):
+                            print("[1회 방문] 보스 생성 시작")
+                            boss = generate_boss_for_room(tilemap, config.itdiff())
+                            boss_active = True
+                            enemies = []
+                            room_first_visit[(current_x, current_y)] = False
+
+            elif keys[pygame.K_i]  :
+                print("i 누름")
+                item_x, item_y = special_coords.get("item", (None, None))
+                current_x, current_y = item_x, item_y
+                tilemap = map_data[(item_x, item_y)]
+                explored_rooms[(item_x, item_y)] = True           
+                draw_tilemap(tilemap)
+                if (current_x, current_y) not in room_first_visit:
+                    room_first_visit[(current_x, current_y)] = True
+                    if room_first_visit.get((current_x, current_y), False):
+                        if any(7 in row for row in tilemap):
+                            if not room_items.get((current_y, current_y)):
+                                generated = generate_items_for_room(tilemap)
+                                if generated:
+                                    room_items[(current_x, current_y)] = generated
+                                    items = generated
+                                    room_first_visit[(current_x, current_y)] = False
+                                    print("아이템 생성!")
+                        if not boss and any(5 in row for row in tilemap):
+                            print("[1회 방문] 보스 생성 시작")
+                            boss = generate_boss_for_room(tilemap, config.itdiff())
+                            boss_active = True
+                            enemies = []
+                            room_first_visit[(current_x, current_y)] = False
+
         new_x, new_y = player.x, player.y
         if keys[pygame.K_LEFT]:
             new_x -= player.speed
@@ -253,7 +341,7 @@ def main():
                         MAP_HEIGHT = MAP_HEIGHT + 2
                         MAP_WIDTH = MAP_WIDTH + 2
                         # 새로운 맵 생성
-                        map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = \
+                        map_data, room_connections, (start_x, start_y), (boss_x, boss_y), special_coords = \
                             generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
                         debug.print_map_data(map_data, MAP_WIDTH, MAP_HEIGHT)
                         debug.print_room_connections(room_connections, MAP_WIDTH, MAP_HEIGHT)
@@ -263,6 +351,10 @@ def main():
                         player.x, player.y = TILE_SIZE*4, TILE_SIZE*4
                         enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y, config.itdiff())
                         boss = []
+                        enemies = []
+                        items = []
+                        room_items = {}
+                        room_first_visit = {}
                         explored_rooms = { (x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT) }
                         explored_rooms[(current_x, current_y)] = True
                         next_stage_active = False
@@ -326,6 +418,9 @@ def main():
                 player = Entity(TILE_SIZE*4.5, TILE_SIZE*4.5, '@', entity_type="player")
                 enemies = generate_enemies_for_room(tilemap, current_x, current_y, start_x, start_y, config.itdiff())
                 boss = []
+                items = []
+                room_items = {}
+                room_first_visit = {}
                 explored_rooms = {(x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT)}
                 explored_rooms[(start_x, start_y)] = True
                 game_over = False
