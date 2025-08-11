@@ -1,4 +1,5 @@
 from game.config import TILE_SIZE, walkable_tiles, door
+import time
 
 def check_tile_collision(x, y, size, tilemap):
     """타일맵 경계 및 벽(walkable_tiles 외)에 부딪히는지 확인합니다."""
@@ -27,8 +28,16 @@ def check_corner_collision(entity1, entity2):
 
 def check_player_enemy_collision(player, enemies, tilemap):
     collided = False
+    now = time.time()
     for enemy in enemies:
         if check_corner_collision(player, enemy):
+            # 먼저 접촉시각만 기록 → 공격 판정에서 그레이스 적용됨
+            try:
+                enemy.last_touch_time = now
+            except Exception:
+                pass
+
+            # 이후에 밀어내기
             ox = (enemy.get_rect().centerx - player.get_rect().centerx) / 2
             oy = (enemy.get_rect().centery - player.get_rect().centery) / 2
             if not check_tile_collision(enemy.x + ox, enemy.y, enemy.size, tilemap):
@@ -74,3 +83,12 @@ def check_player_at_door(player, direction, tilemap, room_conns):
             return True
 
     return False
+
+def check_player_enemy_contact(player, enemy, inflate_px: int = 0) -> bool:
+    """플레이어-적 히트박스 접촉 여부(필요 시 미세틈 보정)."""
+    pr = player.get_rect()
+    er = enemy.get_rect()
+    if inflate_px:
+        pr = pr.inflate(inflate_px, inflate_px)
+        er = er.inflate(inflate_px, inflate_px)
+    return pr.colliderect(er)

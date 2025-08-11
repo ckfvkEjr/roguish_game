@@ -3,7 +3,7 @@
 import pygame
 import math
 import time
-from game.config import TILE_SIZE, RED, BLACK, enemy_types, boss_types, YELLOW
+from game.config import*
 from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
 
@@ -20,7 +20,7 @@ class Entity:
             self.color            = RED
             self.attack_speed     = 0.75 - 0.025*config.itdiff()
             self.damage           = 100
-            self.attack_range = 1
+            self.attack_range     = 1
             self.size             = TILE_SIZE * 0.25
             self.last_damage_time = 0
             self.last_attack_time = 0
@@ -33,6 +33,7 @@ class Entity:
             self.attack_speed     = attrs["attack_speed"]
             self.damage           = attrs["damage"]
             self.size             = attrs["size"]
+            self.attack_type      = attrs["attack_type"]
             self.last_attack_time = 0
         elif entity_type == "item":
             self.entity_type = 'item'
@@ -47,24 +48,43 @@ class Entity:
             self.damage           = attrs["damage"]
             self.size             = attrs["size"]
             self.last_attack_time = 0
+            self.attack_type      = attrs["attack_type"]
 
     def draw(self):
         screen = pygame.display.get_surface()
+        rect = pygame.Rect(int(self.x), int(self.y), int(self.size), int(self.size))
+
+        # 아이템: 기존 스타일 유지 (필요 없다면 이 블록 삭제)
         if  self.entity_type == "item":
             pygame.draw.rect(screen, BLACK, (self.x + TILE_SIZE*0.5 - self.size*0.5, self.y+ TILE_SIZE*0.5 - self.size*0.5, self.size, self.size))
-
             return
 
-        pygame.draw.rect(screen, self.color, (self.x, self.y, self.size, self.size))
+        # 플레이어: 채움 유지
+        if getattr(self, "entity_type", "") == "player":
+            pygame.draw.rect(screen, self.color, rect)
+            return
 
-        if self.symbol != '@':
-            font = pygame.font.SysFont(None, 24)
-            hp_text = font.render(f"{self.hp}", True, BLACK)
-            tx = self.x + self.size/2 - hp_text.get_width()/2
-            ty = self.y - 15
-            screen.blit(hp_text, (tx, ty))
+        # 적/보스: 채우기 없이 테두리
+        pygame.draw.rect(screen, self.color, rect, 2)
 
+        # 중앙 텍스트: attack_type + damage(damge)
+        pre = getattr(self, "attack_type", None)
+        amt = getattr(self, "damge", None)
+        if amt is None:
+            amt = getattr(self, "damage", None)
 
+        if pre and (amt is not None):
+            try:
+                amt_i = int(amt)
+            except (TypeError, ValueError):
+                amt_i = amt
+            label = f"{pre} {amt_i}"
+
+            font = pygame.font.SysFont(None, int(self.size * 0.6), bold=True)
+            text = font.render(label, True, self.color)
+            text_rect = text.get_rect(center=rect.center)
+            screen.blit(text, text_rect)
+    
     def draw_attack_range(self):
         # (선택) 공격 범위 원을 그립니다. 디버그용으로만 사용하세요.
         center = (int(self.x + self.size/2), int(self.y + self.size/2))
@@ -105,12 +125,26 @@ class Entity:
 
     def attack(self, player):
         now = time.time()
-        if now - self.last_attack_time >= self.attack_speed:
-            dist = math.hypot(player.x - self.x, player.y - self.y)
-            if dist <= TILE_SIZE and now - player.last_damage_time >= 1:
-                player.hp -= self.damage
-                player.last_damage_time = now
-            self.last_attack_time = now
+        if now - self.last_attack_time < self.attack_speed:
+            return
+
+        # 중심거리 + 마진
+        cx, cy = self.x + self.size/2, self.y + self.size/2
+        px, py = player.x + player.size/2, player.y + player.size/2
+        center_dist = math.hypot(cx - px, cy - py)
+        contact_threshold = (self.size + player.size)/2 + config.CONTACT_MARGIN_PX
+        near_contact = center_dist <= contact_threshold
+
+        # 직전 프레임의 접촉 그레이스
+        grace = (now - getattr(self, "last_touch_time", 0)) <= config.CONTACT_GRACE_SEC
+
+        if (near_contact or grace) and (now - player.last_damage_time) >= 1:
+            player.hp -= self.damage
+            player.last_damage_time = now
+
+        # 쿨타임 갱신(명중 여부와 무관하게 시도 간격 제한)
+        self.last_attack_time = now
+
 
     def attack_enemies(self, enemies, bosses=None):
         now = time.time()

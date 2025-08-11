@@ -14,7 +14,7 @@ from game.map_tools import (
     generate_items_for_room
 )
 from game.entity import Entity, draw_attack_area
-from game.collision import check_tile_collision, check_player_enemy_collision
+from game.collision import check_tile_collision, check_player_enemy_collision, check_player_enemy_contact
 
 stage = 1           
 boss_active = False 

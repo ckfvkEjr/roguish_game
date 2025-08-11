@@ -13,6 +13,10 @@ GREEN  = (  0, 255,   0)
 YELLOW = (255, 255,   0)
 VIOLET = (238, 130, 238)
 
+#충졸 판정 관련
+CONTACT_MARGIN_PX = 8       # 중심거리 마진(px)
+CONTACT_GRACE_SEC = 0.05     # 밀려난 뒤에도 접촉으로 간주하는 시간(s)
+
 # 타일 크기
 TILE_SIZE = 75
 
@@ -55,14 +59,14 @@ def getscore():
 # (원본에 있던) 적·보스 속성 함수
 def enemy_types(diff):
     return {
-        "a": {"hp":5+(diff-1)*2, "speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1, "color":RED, "attack_speed":1+diff*0.05, "damage":2+(diff-1), "size":TILE_SIZE*0.275},
-        "b": {"hp":8+(diff-1)*2, "speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1, "color":GREEN, "attack_speed":1.5+diff*0.05, "damage":3+(diff-1), "size":TILE_SIZE*0.33},
-        "c": {"hp":10+(diff-1)*2,"speed":(TILE_SIZE/50)*0.8+diff*(TILE_SIZE/50)*0.08,"color":BLUE,"attack_speed":2+diff*0.05,"damage":4+(diff-1),"size":TILE_SIZE*0.385},
+        "a": {"hp":5+(diff-1)*2, "speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1, "color":RED, "attack_speed":1+diff*0.05, "damage":2+(diff-1), "size":TILE_SIZE*0.5, "attack_type" : "-"},
+        "b": {"hp":8+(diff-1)*2, "speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1, "color":GREEN, "attack_speed":1.5+diff*0.05, "damage":3+(diff-1), "size":TILE_SIZE*0.6, "attack_type" : "-"},
+        "c": {"hp":10+(diff-1)*2,"speed":(TILE_SIZE/50)*0.8+diff*(TILE_SIZE/50)*0.08,"color":BLUE,"attack_speed":2+diff*0.05,"damage":4+(diff-1),"size":TILE_SIZE*0.75, "attack_type" : "-"},
     }
 
 def boss_types(diff):
     return {
-        "B_a": {"hp":25+(diff-1)*2,"speed":(TILE_SIZE/50)*0.21+diff*(TILE_SIZE/50)*0.01,"color":VIOLET,"attack_speed":1+diff*0.05,"damage":2+(diff-1)*2,"size":TILE_SIZE*0.5},
-        "B_b": {"hp":50+(diff-1)*2,"speed":(TILE_SIZE/50)*0.18+diff*(TILE_SIZE/50)*0.01,"color":VIOLET,"attack_speed":1.5+diff*0.05,"damage":3+(diff-1)*2,"size":TILE_SIZE*0.6},
-        "B_c": {"hp":75+(diff-1)*2,"speed":(TILE_SIZE/50)*0.12+diff*(TILE_SIZE/50)*0.01,"color":VIOLET,"attack_speed":2+diff*0.05,"damage":4+(diff-1)*2,"size":TILE_SIZE*0.7},
+        "B_a": {"hp":25+(diff-1)*2,"speed":(TILE_SIZE/50)*0.21+diff*(TILE_SIZE/50)*0.1,"color":VIOLET,"attack_speed":1+diff*0.05,"damage":2+(diff-1)*2,"size":TILE_SIZE*0.5, "attack_type" : "-"},
+        "B_b": {"hp":50+(diff-1)*2,"speed":(TILE_SIZE/50)*0.18+diff*(TILE_SIZE/50)*0.1,"color":VIOLET,"attack_speed":1.5+diff*0.05,"damage":3+(diff-1)*2,"size":TILE_SIZE*0.6, "attack_type" : "-"},
+        "B_c": {"hp":75+(diff-1)*2,"speed":(TILE_SIZE/50)*0.12+diff*(TILE_SIZE/50)*0.08,"color":VIOLET,"attack_speed":2+diff*0.05,"damage":4+(diff-1)*2,"size":TILE_SIZE*0.7, "attack_type" : "-"},
     }

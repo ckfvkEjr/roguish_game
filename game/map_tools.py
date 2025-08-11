@@ -9,6 +9,20 @@ from game.mapset import predefined_rooms, start_rooms, boss_room, Item_room, sp2
 from game.entity import Entity
 from game.itemset import item_types
 
+_TILE_FONT = None
+def _get_tile_font():
+    global _TILE_FONT
+    if _TILE_FONT is None:
+        # 타일 크기의 ~60%로 글자 크기
+        _TILE_FONT = pygame.font.SysFont(None, int(TILE_SIZE * 0.6))
+    return _TILE_FONT
+
+def _blit_center_text(surface, text, x, y, color):
+    font = _get_tile_font()
+    ts = font.render(text, True, color)
+    tr = ts.get_rect(center=(x + TILE_SIZE // 2, y + TILE_SIZE // 2))
+    surface.blit(ts, tr)
+
 def add_doors_to_room(room, connections):
     """
     방 중앙 벽에 문(door)을 추가한 뒤, 실제 연결 여부에 따라
@@ -256,23 +270,48 @@ def generate_boss_for_room(tilemap, diff):
                 return bosses
     return bosses
 
+# ===== [교체] 타일 렌더 함수 =====
 def draw_tilemap(tilemap):
     """
-    타일맵(9x9) 을 화면에 그립니다.
+    타일맵(9x9)을 화면에 그립니다.
+    - 통과(0): 중앙에 '0' (옅은 회색)
+    - 불통과(1,2): 흰 배경 + 검은 외곽선 + 중앙에 'X','Y'
+    - 문(door): 중앙에 '='
+    - (옵션) 아이템/다음스테이지 표시 유지
     """
     screen = pygame.display.get_surface()
     for r, row in enumerate(tilemap):
         for c, tile in enumerate(row):
-            x, y = c*TILE_SIZE, r*TILE_SIZE
-            if tile == 1:
-                color = BLUE
+            x, y = c * TILE_SIZE, r * TILE_SIZE
+            rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
+
+            # 공통: 흰 배경으로 깔기
+            pygame.draw.rect(screen, WHITE, rect)
+
+            if tile == 0 or tile == 4 or tile == 5 or tile == 7:
+                # 이동 가능: 중앙에 '0'(옅게)
+                _blit_center_text(screen, "0", x, y, (170, 170, 170))
+
+            elif tile == 1:
+                # 벽1: 외곽선 + 'X'
+                pygame.draw.rect(screen, BLACK, rect, 2)
+                _blit_center_text(screen, "X", x, y, BLACK)
+
             elif tile == 2:
-                color = BLACK
-            elif tile == door or tile == config.next_stage or tile == config.item:
-                color = VIOLET
+                # 벽2: 외곽선 + 'Y'
+                pygame.draw.rect(screen, BLACK, rect, 2)
+                _blit_center_text(screen, "Y", x, y, BLACK)
+
+            elif tile == door:
+                # 문: '='
+                _blit_center_text(screen, "=", x, y, BLACK)
+
+            # ---- 선택: 기존 특수타일 가독성 유지 ----
+            elif getattr(config, "next_stage", None) is not None and tile == config.next_stage:
+                _blit_center_text(screen, "=>", x, y, (0, 150, 0))
             else:
-                color = WHITE
-            pygame.draw.rect(screen, color, (x, y, TILE_SIZE, TILE_SIZE))
+                # 기타 미정 의 타일은 빈 흰칸(필요시 추가 매핑)
+                pass
 
 def generate_items_for_room(tilemap):
     items = []
