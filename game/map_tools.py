@@ -9,6 +9,9 @@ from game.mapset import predefined_rooms, start_rooms, boss_room, Item_room, sp2
 from game.entity import Entity
 from game.itemset import item_types
 
+
+special_coords = {}
+
 _TILE_FONT = None
 def _get_tile_font():
     global _TILE_FONT
@@ -111,6 +114,7 @@ def generate_grid_map(n, start, boss, branch_chance=(0.2 + 0.025*(config.itdiff(
 
 
 def generate_map_with_predefined_rooms(width, height):
+    global special_coords
     """
     Isaac 스타일 그리드 생성 + 메인 경로 분기에서 특수방 노드 생성
     """
@@ -137,7 +141,7 @@ def generate_map_with_predefined_rooms(width, height):
                   if grid[y][x] == 1 and (x, y) not in [(sx, sy), (bx, by)]]
 
     random.shuffle(candidates)
-    special_coords = {}
+    
     # 아이템방과 sp2방 순서대로 생성
     for name, layout_dict in [('item', Item_room), ('sp2', sp2_room)]:
         placed = False
@@ -293,18 +297,18 @@ def draw_tilemap(tilemap):
                 _blit_center_text(screen, "0", x, y, (170, 170, 170))
 
             elif tile == 1:
-                # 벽1: 외곽선 + 'X'
-                pygame.draw.rect(screen, BLACK, rect, 2)
-                _blit_center_text(screen, "X", x, y, BLACK)
+                # 벽1: 외곽선 + 'e^X'
+                pygame.draw.rect(screen, BLUE, rect, 2)
+                _blit_center_text(screen, "e^x", x, y, BLUE)
 
             elif tile == 2:
-                # 벽2: 외곽선 + 'Y'
+                # 벽2: 외곽선 + 'x'
                 pygame.draw.rect(screen, BLACK, rect, 2)
-                _blit_center_text(screen, "Y", x, y, BLACK)
+                _blit_center_text(screen, "x", x, y, BLACK)
 
             elif tile == door:
                 # 문: '='
-                _blit_center_text(screen, "=", x, y, BLACK)
+                _blit_center_text(screen, "=", x, y, VIOLET)
 
             # ---- 선택: 기존 특수타일 가독성 유지 ----
             elif getattr(config, "next_stage", None) is not None and tile == config.next_stage:
@@ -326,12 +330,15 @@ def generate_items_for_room(tilemap):
         cx, cy = random.choice(possible)
         it_key = random.choice(list(item_types.keys()))
         ent = Entity(cx * TILE_SIZE, cy * TILE_SIZE, it_key, entity_type="item")
+
+        # ▼ 추가: itemset의 texture 값을 엔티티에 주입 (경로 문자열)
+        ent.texture = item_types[it_key].get("texture")
+
         items.append(ent)
         print('item 생성!')
         print(f"[아이템 생성 후보 수]: {len(possible)}")
         print(f"[선택된 타일 좌표]: {cx}, {cy}")
         print(f"[선택된 아이템 키]: {it_key}")
-        print(f"[생성된 아이템]: {ent}")
     return items
 
 def move_to_next_room(direction, player,

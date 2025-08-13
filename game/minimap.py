@@ -1,8 +1,7 @@
-# game/minimap.py
-
 import pygame
 from game.config import *
 import game.config as config
+from game.map_tools import special_coords
 
 def draw_minimap(explored_rooms, current_x, current_y, width, height, texts, room_connections, boss_X, boss_y):
     global diff
@@ -34,7 +33,14 @@ def draw_minimap(explored_rooms, current_x, current_y, width, height, texts, roo
     # 탐험된 방
     for (x,y), seen in explored_rooms.items():
         if seen:
-            color = VIOLET if (x,y) == (boss_X, boss_y) else WHITE
+            if (x,y) == (boss_X, boss_y):
+                color = VIOLET
+            elif (x,y) == (special_coords["item"]):
+                color = YELLOW
+            elif (x,y) == (special_coords["sp2"]):
+                color = BLUE
+            else:
+                color = WHITE
             pygame.draw.rect(screen, color,
                              (minimap_x + x*room_w,
                               minimap_y + y*room_h,
@@ -53,7 +59,7 @@ def draw_minimap(explored_rooms, current_x, current_y, width, height, texts, roo
                         if room_connections[(nx, ny)].get("up")   and ny > y: break
                         if room_connections[(nx, ny)].get("down") and ny < y: break
                         if room_connections[(nx, ny)].get("left") and nx > x: break
-                        if room_connections[(nx, ny)].get("right")and nx < x: break
+                        if room_connections[(nx, ny)].get("right") and nx < x: break
             else:
                 continue  # break 안 됐으면 연결 없음
             # 연결 있으면 회색 표시

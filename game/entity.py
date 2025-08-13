@@ -1,11 +1,44 @@
 # game/entity.py
 
 import pygame
+import os
 import math
 import time
 from game.config import*
 from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
+
+ITEM_TEXTURES = {}
+
+def _get_item_texture(path: str, scale_px: int | None = None) -> pygame.Surface | None:
+    """경로 기반 텍스처 로드/스케일/캐시. 실패 시 None."""
+    if not path:
+        return None
+    if scale_px is None:
+        scale_px = int(TILE_SIZE * 0.6)
+
+    # 상대경로 지원: 프로젝트 루트(…/game/..) 기준으로 정규화
+    if os.path.isabs(path):
+        abs_path = path
+    else:
+        root = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
+        abs_path = os.path.normpath(os.path.join(root, path))
+
+    key = (abs_path, scale_px)
+    tex = ITEM_TEXTURES.get(key)
+    if tex is not None:
+        return tex
+
+    if not os.path.exists(abs_path):
+        return None
+
+    try:
+        img = pygame.image.load(abs_path).convert_alpha()
+        tex = pygame.transform.smoothscale(img, (scale_px, scale_px))
+        ITEM_TEXTURES[key] = tex
+        return tex
+    except Exception:
+        return None
 
 class Entity:
     def __init__(self, x, y, symbol, entity_type="player"):
@@ -14,12 +47,17 @@ class Entity:
         self.symbol = symbol
         self.entity_type = entity_type
         if entity_type == "player":
-            self.max_hp           = 1000000000000
+            self.max_hp           = 100
             self.hp               = self.max_hp
             self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*config.itdiff()
             self.color            = RED
             self.attack_speed     = 0.75 - 0.025*config.itdiff()
-            self.damage           = 100
+            self.damage           = 5
+            self.attack_types     = ["+", "-"]
+            self.attack_index     = 0
+            self.attack_type      = self.attack_types[self.attack_index]
+            self.min_damage       = 1
+            self.max_damage       = 9
             self.attack_range     = 1
             self.size             = TILE_SIZE * 0.25
             self.last_damage_time = 0
@@ -37,8 +75,9 @@ class Entity:
             self.last_attack_time = 0
         elif entity_type == "item":
             self.entity_type = 'item'
-            self.size = TILE_SIZE * 0.2
+            self.size = TILE_SIZE * 0.5
             self.color = BLACK
+            
         else:
             attrs = enemy_types(config.itdiff()).get(entity_type, enemy_types(config.itdiff())["a"])
             self.hp               = attrs["hp"]
@@ -55,9 +94,20 @@ class Entity:
         rect = pygame.Rect(int(self.x), int(self.y), int(self.size), int(self.size))
 
         # 아이템: 기존 스타일 유지 (필요 없다면 이 블록 삭제)
-        if  self.entity_type == "item":
-            pygame.draw.rect(screen, BLACK, (self.x + TILE_SIZE*0.5 - self.size*0.5, self.y+ TILE_SIZE*0.5 - self.size*0.5, self.size, self.size))
+        if getattr(self, "entity_type", "") == "item":
+            tex = _get_item_texture(getattr(self, "texture", None))
+            if tex:
+                cx, cy = rect.center
+                tr = tex.get_rect(center=(cx, cy))
+                screen.blit(tex, tr)
+            else:
+                # 폴백(텍스처 로드 실패 시): 작은 사각형
+                BLACK = (0, 0, 0)
+                cx = self.x + TILE_SIZE * 0.5 - self.size * 0.5
+                cy = self.y + TILE_SIZE * 0.5 - self.size * 0.5
+                pygame.draw.rect(screen, BLACK, (cx, cy, self.size, self.size))
             return
+
 
         # 플레이어: 채움 유지
         if getattr(self, "entity_type", "") == "player":
@@ -69,10 +119,7 @@ class Entity:
 
         # 중앙 텍스트: attack_type + damage(damge)
         pre = getattr(self, "attack_type", None)
-        amt = getattr(self, "damge", None)
-        if amt is None:
-            amt = getattr(self, "damage", None)
-
+        amt = getattr(self, "hp", None)
         if pre and (amt is not None):
             try:
                 amt_i = int(amt)
@@ -139,20 +186,22 @@ class Entity:
         grace = (now - getattr(self, "last_touch_time", 0)) <= config.CONTACT_GRACE_SEC
 
         if (near_contact or grace) and (now - player.last_damage_time) >= 1:
-            player.hp -= self.damage
+            dmg = max(1,int(abs(self.hp)))
+            player.hp -= dmg
             player.last_damage_time = now
 
         # 쿨타임 갱신(명중 여부와 무관하게 시도 간격 제한)
         self.last_attack_time = now
 
 
+# ── [수정] 플레이어의 공격: 부호 연산만 적용, 제거 조건은 hp == 0 ──
     def attack_enemies(self, enemies, bosses=None):
         now = time.time()
         if now - self.last_attack_time < self.attack_speed:
             return
 
         attack_range = self.attack_range * TILE_SIZE
-        attack_width = TILE_SIZE * 0.8  # 사각형 너비 (좌우 허용 범위)
+        attack_width = TILE_SIZE  # 기존보다 살짝 넓힘
         px = self.x + self.size / 2
         py = self.y + self.size / 2
 
@@ -163,12 +212,10 @@ class Entity:
             targets.extend(bosses)
 
         for target in targets:
-            
             ex = target.x + target.size / 2
             ey = target.y + target.size / 2
 
             in_range = False
-
             if self.last_direction == "up":
                 if (abs(ex - px) <= attack_width / 2 and
                     py - attack_range <= ey < py):
@@ -186,16 +233,34 @@ class Entity:
                     px < ex <= px + attack_range):
                     in_range = True
 
-            if in_range:
-                target.hp -= self.damage
-                print(f"[공격] {target.symbol}에게 {self.damage} 데미지")
-                self.last_attack_time = now  # 타격했을 때만 쿨타임 초기화
+            if not in_range:
+                continue
 
-        # 죽은 적 제거
+            current_attack_type = self.attack_types[self.attack_index]
+
+            # 공격 타입별 처리
+            if (current_attack_type == '+' and target.attack_type == "-") or (current_attack_type == "-" and target.attack_type == "+"):
+                target.hp -= self.damage
+                if target.hp < 0:
+                    target.hp = abs(target.hp)  # 음수면 절대값으로 변환
+                    if target.attack_type == "+":
+                        target.attack_type = "-"
+                    elif target.attack_type =="-":
+                        target.attack_type = "+"
+                        
+            else:
+                target.hp += self.damage
+
+            print(f"[공격] {target.symbol} hp={target.hp} "
+                f"(ptype={current_attack_type}, pdmg={self.damage})")
+
+            self.last_attack_time = now  # 맞췄을 때만 쿨타임 초기화
+
+        # HP <= 0인 적 제거
         if enemies:
-            enemies[:] = [e for e in enemies if e.hp > 0]
+            enemies[:] = [e for e in enemies if e.hp != 0]
         if bosses:
-            bosses[:] = [b for b in bosses if b.hp > 0]
+            bosses[:] = [b for b in bosses if b.hp != 0]
 
 
 def draw_attack_area(self):
@@ -204,12 +269,15 @@ def draw_attack_area(self):
         return
 
     attack_range = self.attack_range * TILE_SIZE
-    attack_width = TILE_SIZE * 0.8
+    attack_width = TILE_SIZE * 1.1
     px = self.x + self.size / 2
     py = self.y + self.size / 2
 
     screen = pygame.display.get_surface()
-
+    label = f"{self.attack_range}"
+    font = pygame.font.SysFont(None, int(TILE_SIZE*0.65), bold=False)
+    text = font.render(label, True, YELLOW)
+    
     if self.last_direction == "up":
         rect = pygame.Rect(
             px - attack_width/2,
@@ -217,6 +285,8 @@ def draw_attack_area(self):
             attack_width,
             attack_range
         )
+        text_rect = text.get_rect(center=rect.center)
+        screen.blit(text, text_rect)
     elif self.last_direction == "down":
         rect = pygame.Rect(
             px - attack_width/2,
@@ -224,6 +294,8 @@ def draw_attack_area(self):
             attack_width,
             attack_range
         )
+        text_rect = text.get_rect(center=rect.center)
+        screen.blit(text, text_rect)
     elif self.last_direction == "left":
         rect = pygame.Rect(
             px - attack_range,
@@ -231,6 +303,8 @@ def draw_attack_area(self):
             attack_range,
             attack_width
         )
+        text_rect = text.get_rect(center=rect.center)
+        screen.blit(text, text_rect)
     elif self.last_direction == "right":
         rect = pygame.Rect(
             px,
@@ -238,6 +312,8 @@ def draw_attack_area(self):
             attack_range,
             attack_width
         )
+        text_rect = text.get_rect(center=rect.center)
+        screen.blit(text, text_rect)
     else:
         return
 

@@ -14,7 +14,7 @@ from game.map_tools import (
     generate_items_for_room
 )
 from game.entity import Entity, draw_attack_area
-from game.collision import check_tile_collision, check_player_enemy_collision, check_player_enemy_contact
+from game.collision import check_tile_collision, check_player_enemy_collision
 
 stage = 1           
 boss_active = False 
@@ -91,6 +91,19 @@ def main():
             elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
                 pygame.quit()
                 sys.exit()
+            elif ev.type == pygame.KEYDOWN:
+                # 좌/우: 공격 부호 전환
+                if ev.key == pygame.K_LSHIFT:
+                    player.attack_index = (player.attack_index + 1) % len(player.attack_types)
+                    player.attack_type  = player.attack_types[player.attack_index]
+                elif ev.key == pygame.K_RSHIFT:
+                    player.attack_index = (player.attack_index - 1) % len(player.attack_types)
+                    player.attack_type  = player.attack_types[player.attack_index]  
+                # 상/하: 데미지 증감 (클램프)
+                elif ev.key == pygame.K_e:
+                    player.damage = min(player.max_damage, player.damage + 1)
+                elif ev.key == pygame.K_q:
+                    player.damage = max(player.min_damage, player.damage - 1)
 
         # 키 상태
         keys = pygame.key.get_pressed()
@@ -384,6 +397,7 @@ def main():
         
         if keys[pygame.K_SPACE]:
             draw_attack_area(player)
+            
 
         current_items = room_items.get((current_x, current_y), [])
         for item in current_items[:]:  # 복사본 반복
@@ -412,7 +426,7 @@ def main():
                 config.reset_diff()
                 MAP_WIDTH = 9
                 MAP_HEIGHT = 9
-                map_data, room_connections, (start_x, start_y), (boss_x, boss_y) = generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
+                map_data, room_connections, (start_x, start_y), (boss_x, boss_y), special_coords = generate_map_with_predefined_rooms(MAP_WIDTH, MAP_HEIGHT)
                 current_x, current_y = start_x, start_y
                 tilemap = map_data[(current_x, current_y)]
                 player = Entity(TILE_SIZE*4.5, TILE_SIZE*4.5, '@', entity_type="player")
@@ -446,6 +460,11 @@ def main():
         # 체력바 배경 + 전경
         pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_width, bar_height))       # 배경
         pygame.draw.rect(screen, (255, 0, 0), (bar_x, bar_y, bar_width * hp_ratio, bar_height))  # 빨간 체력바
+        
+        # 공격 유형 + 수치
+        font = pygame.font.SysFont(None, 24)
+        atk_text = font.render(f"ATK: {player.attack_type} {player.damage} / {player.max_damage}", True, (255,255,255))
+        screen.blit(atk_text, (bar_x + 60, bar_y + 5 + bar_height))
 
         # 수치 텍스트
         screen.blit(hp_text, (bar_x + 60, bar_y - 25))

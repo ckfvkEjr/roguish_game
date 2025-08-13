@@ -41,9 +41,9 @@ def check_player_enemy_collision(player, enemies, tilemap):
             ox = (enemy.get_rect().centerx - player.get_rect().centerx) / 2
             oy = (enemy.get_rect().centery - player.get_rect().centery) / 2
             if not check_tile_collision(enemy.x + ox, enemy.y, enemy.size, tilemap):
-                enemy.x += ox * 0.1
+                enemy.x += ox * 0.15
             if not check_tile_collision(enemy.x, enemy.y + oy, enemy.size, tilemap):
-                enemy.y += oy * 0.1
+                enemy.y += oy * 0.15
             collided = True
     return collided
 
