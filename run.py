@@ -501,7 +501,7 @@ def main():
         # HUD에 코인 표시(HP 아래 등)
         font = pygame.font.SysFont(None, 24)
         coin_text = font.render(f"COIN: {player_coins}", True, (255,255,255))
-        screen.blit(coin_text, (SCREEN_WIDTH - 220, 80))
+        screen.blit(coin_text, (SCREEN_WIDTH - 220, 100))
 
         # 수치 텍스트
         screen.blit(hp_text, (bar_x + 60, bar_y - 25))

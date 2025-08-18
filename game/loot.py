@@ -14,9 +14,7 @@ def generate_coin_drop(x_px: float, y_px: float, size_px: float) -> list[dict]:
     # 필요시 가중치/복수 키로 확장. 지금은 "+1" 단일 키.
     coin_key = "+1"
 
-    cx = int((x_px + size_px / 2) // TILE_SIZE)
-    cy = int((y_px + size_px / 2) // TILE_SIZE)
-    px = cx * TILE_SIZE + TILE_SIZE * 0.5
-    py = cy * TILE_SIZE + TILE_SIZE * 0.5
+    px = x_px + size_px * 0.5
+    py = y_px + size_px * 0.5
 
     return [{"key": coin_key, "pos": (px, py)} for _ in range(cnt)]
