@@ -11,7 +11,9 @@ from game.map_tools import (
     move_to_next_room,
     generate_enemies_for_room,
     generate_boss_for_room,
-    generate_items_for_room
+    generate_items_for_room,
+    
+    
 )
 from game.entity import Entity, draw_attack_area
 from game.collision import check_tile_collision, check_player_enemy_collision
@@ -24,6 +26,10 @@ game_over = False
 items = []
 room_items = {}
 room_first_visit = {}
+collected_items = set() #획득한 아이템
+player_coins = 0
+room_coins = {}  # {(x,y): [coin_entities...]}
+
 
 def apply_item_effect(player, item_data):
     if item_data.get("max_hp") is not None:
@@ -34,14 +40,22 @@ def apply_item_effect(player, item_data):
     if item_data.get("speed") is not None:
         player.speed += item_data["speed"]
     if item_data.get("attack_speed") is not None:
-        player.attack_speed += item_data["attack_speed"]
+        player.attack_speed *= item_data["attack_speed"]
     if item_data.get("attack_range") is not None:
         player.attack_range += item_data["attack_range"]
     if item_data.get("damage") is not None:
         player.damage += item_data["damage"]
+    if item_data.get("max_damage") is not None:
+        player.max_damage += item_data["max_damage"]
+    if item_data.get("min_damage") is not None:
+        player.min_damage += item_data["min_damage"]
     if item_data.get("size") is not None:
         player.size += item_data["size"]
-
+    if item_data.get("sqauare_min_max_damage") is not None:
+        player.max_damage = player.max_damage*player.max_damage
+        player.min_damage = player.min_damage*player.min_damage
+        player.damage     = player.damage*player.damage
+            
 def check_collision(player, item):
     item_x = item.x + TILE_SIZE * 0.5 - item.size * 0.5
     item_y = item.y + TILE_SIZE * 0.5 - item.size * 0.5
@@ -82,7 +96,11 @@ def main():
         global items
         global room_items
         global room_first_visit
+        global player_coins
+        global room_coins
         screen.fill(BLACK)
+        
+
         # 이벤트 처리
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
@@ -128,7 +146,7 @@ def main():
                     if room_first_visit.get((current_x, current_y), False):
                         if any(7 in row for row in tilemap):
                             if not room_items.get((current_y, current_y)):
-                                generated = generate_items_for_room(tilemap)
+                                generated = generate_items_for_room(tilemap, exclude_symbols = collected_items)
                                 if generated:
                                     room_items[(current_x, current_y)] = generated
                                     items = generated
@@ -159,7 +177,7 @@ def main():
                     if room_first_visit.get((current_x, current_y), False):
                         if any(7 in row for row in tilemap):
                             if not room_items.get((current_y, current_y)):
-                                generated = generate_items_for_room(tilemap)
+                                generated = generate_items_for_room(tilemap, exclude_symbols = collected_items)
                                 if generated:
                                     room_items[(current_x, current_y)] = generated
                                     items = generated
@@ -190,7 +208,7 @@ def main():
                     if room_first_visit.get((current_x, current_y), False):
                         if any(7 in row for row in tilemap):
                             if not room_items.get((current_y, current_y)):
-                                generated = generate_items_for_room(tilemap)
+                                generated = generate_items_for_room(tilemap, exclude_symbols = collected_items)
                                 if generated:
                                     room_items[(current_x, current_y)] = generated
                                     items = generated
@@ -221,7 +239,7 @@ def main():
                     if room_first_visit.get((current_x, current_y), False):
                         if any(7 in row for row in tilemap):
                             if not room_items.get((current_y, current_y)):
-                                generated = generate_items_for_room(tilemap)
+                                generated = generate_items_for_room(tilemap, exclude_symbols = collected_items)
                                 if generated:
                                     room_items[(current_x, current_y)] = generated
                                     items = generated
@@ -303,11 +321,12 @@ def main():
             player.x = new_x
         if not check_tile_collision(player.x, new_y, player.size, tilemap) and            not check_player_enemy_collision(player, enemies + boss, tilemap):
             player.y = new_y
-
+        
         # 공격 처리
         if keys[pygame.K_SPACE]:
-            player.attack_enemies(enemies, boss)
-            
+            drops = player.attack_enemies(enemies, boss)
+            if drops:
+                room_coins.setdefault((current_x, current_y), []).extend(drops)
         
         # 적 행동
         for enemy in enemies:
@@ -368,6 +387,8 @@ def main():
                         items = []
                         room_items = {}
                         room_first_visit = {}
+                        player_coins = 0
+                        room_coins.clear()
                         explored_rooms = { (x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT) }
                         explored_rooms[(current_x, current_y)] = True
                         next_stage_active = False
@@ -435,12 +456,23 @@ def main():
                 items = []
                 room_items = {}
                 room_first_visit = {}
+                collected_items.clear()
                 explored_rooms = {(x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT)}
                 explored_rooms[(start_x, start_y)] = True
                 game_over = False
                 next_stage_active = False
                 next_stage_timer = None
-
+                
+        current_coin_list = room_coins.get((current_x, current_y), [])
+        for c in current_coin_list[:]:
+            if (player.x < c.x + c.size and
+                player.x + player.size > c.x and
+                player.y < c.y + c.size and
+                player.y + player.size > c.y):
+                player_coins += getattr(c, "coin_value", 1)
+                current_coin_list.remove(c)
+        for c in current_coin_list:
+            c.draw()
         # 미니맵 등 UI 요소를 마지막에 그린다
         minimap.draw_minimap(explored_rooms, current_x, current_y,
                              MAP_WIDTH, MAP_HEIGHT, len(enemies), room_connections, boss_x, boss_y)
@@ -463,8 +495,13 @@ def main():
         
         # 공격 유형 + 수치
         font = pygame.font.SysFont(None, 24)
-        atk_text = font.render(f"ATK: {player.attack_type} {player.damage} / {player.max_damage}", True, (255,255,255))
-        screen.blit(atk_text, (bar_x + 60, bar_y + 5 + bar_height))
+        atk_text = font.render(f"ATK: {player.attack_type} {player.damage} / max : {player.max_damage} min : {player.min_damage}", True, (255,255,255))
+        screen.blit(atk_text, (bar_x + 5, bar_y + 5 + bar_height))
+        
+        # HUD에 코인 표시(HP 아래 등)
+        font = pygame.font.SysFont(None, 24)
+        coin_text = font.render(f"COIN: {player_coins}", True, (255,255,255))
+        screen.blit(coin_text, (SCREEN_WIDTH - 220, 80))
 
         # 수치 텍스트
         screen.blit(hp_text, (bar_x + 60, bar_y - 25))

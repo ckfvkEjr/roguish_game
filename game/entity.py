@@ -7,6 +7,7 @@ import time
 from game.config import*
 from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
+from game.loot import generate_coin_drop
 
 ITEM_TEXTURES = {}
 
@@ -52,12 +53,12 @@ class Entity:
             self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*config.itdiff()
             self.color            = RED
             self.attack_speed     = 0.75 - 0.025*config.itdiff()
-            self.damage           = 5
+            self.damage           = 2
             self.attack_types     = ["+", "-"]
             self.attack_index     = 0
             self.attack_type      = self.attack_types[self.attack_index]
             self.min_damage       = 1
-            self.max_damage       = 9
+            self.max_damage       = 3
             self.attack_range     = 1
             self.size             = TILE_SIZE * 0.25
             self.last_damage_time = 0
@@ -77,7 +78,11 @@ class Entity:
             self.entity_type = 'item'
             self.size = TILE_SIZE * 0.5
             self.color = BLACK
-            
+        elif entity_type == "coin":
+            self.entity_type = "coin"
+            self.size = TILE_SIZE*0.18
+            self.color = YELLOW
+            self.coin_value = getattr(self, "coin_value", 1)  # 기본 1
         else:
             attrs = enemy_types(config.itdiff()).get(entity_type, enemy_types(config.itdiff())["a"])
             self.hp               = attrs["hp"]
@@ -198,14 +203,15 @@ class Entity:
     def attack_enemies(self, enemies, bosses=None):
         now = time.time()
         if now - self.last_attack_time < self.attack_speed:
-            return
+            return []
 
         attack_range = self.attack_range * TILE_SIZE
-        attack_width = TILE_SIZE  # 기존보다 살짝 넓힘
+        attack_width = TILE_SIZE*1.1  # 기존보다 살짝 넓힘
         px = self.x + self.size / 2
         py = self.y + self.size / 2
 
         targets = []
+        coin_drop = []
         if enemies:
             targets.extend(enemies)
         if bosses:
@@ -239,28 +245,41 @@ class Entity:
             current_attack_type = self.attack_types[self.attack_index]
 
             # 공격 타입별 처리
-            if (current_attack_type == '+' and target.attack_type == "-") or (current_attack_type == "-" and target.attack_type == "+"):
+            if ((current_attack_type == '+' and target.attack_type == "-")
+                or (current_attack_type == "-" and target.attack_type == "+")):
                 target.hp -= self.damage
                 if target.hp < 0:
                     target.hp = abs(target.hp)  # 음수면 절대값으로 변환
                     if target.attack_type == "+":
                         target.attack_type = "-"
-                    elif target.attack_type =="-":
+                    elif target.attack_type == "-":
                         target.attack_type = "+"
-                        
             else:
                 target.hp += self.damage
 
             print(f"[공격] {target.symbol} hp={target.hp} "
                 f"(ptype={current_attack_type}, pdmg={self.damage})")
 
+            # ── 코인 드랍: '사망' 판정 시 1회 ──
+            # 이 게임 규칙은 hp == 0 이 사망
+            if getattr(target, "entity_type", "") != "player" and target.hp == 0:
+                # 지역 import로 순환참조 회피
+                for drop in generate_coin_drop(target.x, target.y, target.size):
+                    coin = Entity(drop["pos"][0] - TILE_SIZE*0.5,
+                                  drop["pos"][1] - TILE_SIZE*0.5,
+                                  '$', entity_type="coin")
+                    coin.coin_value = drop["value"]
+                    coin_drop.append(coin)
+                
             self.last_attack_time = now  # 맞췄을 때만 쿨타임 초기화
 
-        # HP <= 0인 적 제거
+        # hp == 0 만 제거
         if enemies:
             enemies[:] = [e for e in enemies if e.hp != 0]
         if bosses:
             bosses[:] = [b for b in bosses if b.hp != 0]
+
+        return coin_drop
 
 
 def draw_attack_area(self):

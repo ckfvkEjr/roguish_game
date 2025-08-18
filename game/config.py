@@ -69,7 +69,10 @@ def enemy_types(diff):
 
 def boss_types(diff):
     return {
-        "B_a": {"hp":25+(diff-1)*5,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.12,"color":VIOLET,"attack_speed":1+diff*0.05,"damage":25+(diff-1)*5,"size":TILE_SIZE*0.7, "attack_type" : "-"},
-        "B_b": {"hp":40+(diff-1)*5,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1,"color":VIOLET,"attack_speed":1.5+diff*0.05,"damage":40+(diff-1)*5,"size":TILE_SIZE*0.8, "attack_type" : "-"},
-        "B_c": {"hp":55+(diff-1)*5 ,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.08,"color":VIOLET,"attack_speed":2+diff*0.05,"damage":55+(diff-1)*5,"size":TILE_SIZE*0.95, "attack_type" : "-"},
+        "B_a": {"hp":15+(diff-1)*5,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.12,"color":VIOLET,"attack_speed":1+diff*0.05,"damage":15+(diff-1)*5,"size":TILE_SIZE*0.7, "attack_type" : "-"},
+        "B_b": {"hp":20+(diff-1)*5,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1,"color":VIOLET,"attack_speed":1.5+diff*0.05,"damage":20+(diff-1)*5,"size":TILE_SIZE*0.8, "attack_type" : "-"},
+        "B_c": {"hp":25+(diff-1)*5 ,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.08,"color":VIOLET,"attack_speed":2+diff*0.05,"damage":25+(diff-1)*5,"size":TILE_SIZE*0.95, "attack_type" : "-"},
+        "B_a": {"hp":15+(diff-1)*5,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.12,"color":VIOLET,"attack_speed":1+diff*0.05,"damage":15+(diff-1)*5,"size":TILE_SIZE*0.7, "attack_type" : "+"},
+        "B_b": {"hp":20+(diff-1)*5,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.1,"color":VIOLET,"attack_speed":1.5+diff*0.05,"damage":20+(diff-1)*5,"size":TILE_SIZE*0.8, "attack_type" : "+"},
+        "B_c": {"hp":25+(diff-1)*5 ,"speed":(TILE_SIZE/50)+diff*(TILE_SIZE/50)*0.08,"color":VIOLET,"attack_speed":2+diff*0.05,"damage":25+(diff-1)*5,"size":TILE_SIZE*0.95, "attack_type" : "+"},
     }

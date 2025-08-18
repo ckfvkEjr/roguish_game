@@ -317,28 +317,47 @@ def draw_tilemap(tilemap):
                 # 기타 미정 의 타일은 빈 흰칸(필요시 추가 매핑)
                 pass
 
-def generate_items_for_room(tilemap):
+def generate_items_for_room(tilemap, exclude_symbols=None):
     items = []
     possible = []
-    
+
+    # 먹은 아이템 집합화(옵션)
+    if exclude_symbols is None:
+        exclude = set()
+    else:
+        exclude = set(exclude_symbols)
+
+    # 아이템 스폰 가능한 타일(= config.item) 수집
     for r in range(len(tilemap)):
         for c in range(len(tilemap[r])):
             if tilemap[r][c] == config.item:
                 possible.append((c, r))
 
-    if possible:
-        cx, cy = random.choice(possible)
-        it_key = random.choice(list(item_types.keys()))
-        ent = Entity(cx * TILE_SIZE, cy * TILE_SIZE, it_key, entity_type="item")
+    if not possible:
+        return items  # 후보 타일이 없으면 생성 안 함
 
-        # ▼ 추가: itemset의 texture 값을 엔티티에 주입 (경로 문자열)
-        ent.texture = item_types[it_key].get("texture")
+    # 생성 가능한 아이템 심볼 풀(먹은 아이템 제외)
+    candidates = [k for k in item_types.keys() if k not in exclude]
+    if not candidates:
+        print("[아이템 생성] 제외로 인해 생성 가능한 아이템 없음")
+        return items
 
-        items.append(ent)
-        print('item 생성!')
-        print(f"[아이템 생성 후보 수]: {len(possible)}")
-        print(f"[선택된 타일 좌표]: {cx}, {cy}")
-        print(f"[선택된 아이템 키]: {it_key}")
+    # 타일/아이템 선택 및 엔티티 생성
+    cx, cy = random.choice(possible)
+    it_key = random.choice(candidates)
+
+    ent = Entity(cx * TILE_SIZE, cy * TILE_SIZE, it_key, entity_type="item")
+    # itemset의 texture 값을 엔티티에 주입 (경로 문자열)
+    ent.texture = item_types[it_key].get("texture")
+
+    items.append(ent)
+
+    # 로그
+    print('item 생성!')
+    print(f"[아이템 생성 후보 수]: {len(possible)}")
+    print(f"[선택된 타일 좌표]: {cx}, {cy}")
+    print(f"[선택된 아이템 키]: {it_key}")
+
     return items
 
 def move_to_next_room(direction, player,
