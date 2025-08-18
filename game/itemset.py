@@ -73,3 +73,10 @@ item_types = {
         "texture" : "assets/item/x^2.png"
     },
 }
+
+coin_types = {
+    "+1" : {
+        "value" : 1,
+        "texture" : "assets/loot/coin.png" 
+    }
+}

@@ -112,7 +112,13 @@ class Entity:
                 cy = self.y + TILE_SIZE * 0.5 - self.size * 0.5
                 pygame.draw.rect(screen, BLACK, (cx, cy, self.size, self.size))
             return
-
+        elif getattr(self, "entity_type", "") == "coin":
+            tex = _get_item_texture(getattr(self, "texture", None))
+            
+            if tex:
+                cx, cy = rect.center
+                tr = tex.get_rect(center=(cx, cy))
+                screen.blit(tex, tr)
 
         # 플레이어: 채움 유지
         if getattr(self, "entity_type", "") == "player":
@@ -265,10 +271,11 @@ class Entity:
             if getattr(target, "entity_type", "") != "player" and target.hp == 0:
                 # 지역 import로 순환참조 회피
                 for drop in generate_coin_drop(target.x, target.y, target.size):
+                    cx, cy = drop["pos"]
+                    coin_key = drop["key"]
                     coin = Entity(drop["pos"][0] - TILE_SIZE*0.5,
                                   drop["pos"][1] - TILE_SIZE*0.5,
                                   '$', entity_type="coin")
-                    coin.coin_value = drop["value"]
                     coin_drop.append(coin)
                 
             self.last_attack_time = now  # 맞췄을 때만 쿨타임 초기화

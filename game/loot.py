@@ -2,26 +2,21 @@
 import random
 from game.config import TILE_SIZE
 import game.config as config
+from game.itemset import coin_types
 
 def generate_coin_drop(x_px: float, y_px: float, size_px: float) -> list[dict]:
-    """
-    적 사망 위치 기준 코인 드랍 정보(데이터)만 생성해 돌려준다.
-    - Entity 생성은 caller(entity.py)에서 한다 → 순환 import 방지
-    반환: [{"value": int, "pos": (px, py)} ...]
-    """
     diff = config.itdiff()
-
-    drop_rate = 0.30 + 0.05 * max(0, diff - 1)  # 30% + 단계당 5%
+    drop_rate = 1 #0.30 + 0.05 * max(0, diff - 1) # <- 디버그용 100퍼 ㅇㅇ
     if random.random() > drop_rate:
         return []
 
-    cnt   = random.randint(1, 1 + diff // 2)   # 1 ~
-    value = 1 + (diff // 3)                    # 1, 2, ...
+    cnt = random.randint(1, 1 + diff // 2)
+    # 필요시 가중치/복수 키로 확장. 지금은 "+1" 단일 키.
+    coin_key = "+1"
 
-    # 적 중심을 타일 중앙으로 스냅
     cx = int((x_px + size_px / 2) // TILE_SIZE)
     cy = int((y_px + size_px / 2) // TILE_SIZE)
     px = cx * TILE_SIZE + TILE_SIZE * 0.5
     py = cy * TILE_SIZE + TILE_SIZE * 0.5
 
-    return [{"value": value, "pos": (px, py)} for _ in range(cnt)]
+    return [{"key": coin_key, "pos": (px, py)} for _ in range(cnt)]
