@@ -8,6 +8,7 @@ from game.config import*
 from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
 from game.loot import generate_coin_drop
+from game.itemset import coin_types
 
 ITEM_TEXTURES = {}
 
@@ -80,9 +81,12 @@ class Entity:
             self.color = BLACK
         elif entity_type == "coin":
             self.entity_type = "coin"
-            self.size = TILE_SIZE*0.18
+            self.size = TILE_SIZE*0.5
             self.color = YELLOW
-            self.coin_value = getattr(self, "coin_value", 1)  # 기본 1
+            info = coin_types.get(symbol, {})
+            self.coin_value = info.get("value", 1)  # 기본 1
+            tex_path = info.get("texture")
+            self.texture = pygame.image.load(tex_path).convert_alpha() if tex_path else None
         else:
             attrs = enemy_types(config.itdiff()).get(entity_type, enemy_types(config.itdiff())["a"])
             self.hp               = attrs["hp"]
@@ -113,13 +117,13 @@ class Entity:
                 pygame.draw.rect(screen, BLACK, (cx, cy, self.size, self.size))
             return
         elif getattr(self, "entity_type", "") == "coin":
-            tex = _get_item_texture(getattr(self, "texture", None))
-            
+            tex = self.texture
             if tex:
-                cx, cy = rect.center
-                tr = tex.get_rect(center=(cx, cy))
-                screen.blit(tex, tr)
-
+                if tex.get_size() != rect.size:
+                    tex = pygame.transform.scale(tex, rect.size)
+                screen.blit(tex, rect)
+            return
+                
         # 플레이어: 채움 유지
         if getattr(self, "entity_type", "") == "player":
             pygame.draw.rect(screen, self.color, rect)
@@ -273,9 +277,8 @@ class Entity:
                 for drop in generate_coin_drop(target.x, target.y, target.size):
                     cx, cy = drop["pos"]
                     coin_key = drop["key"]
-                    coin = Entity(drop["pos"][0] - TILE_SIZE*0.5,
-                                  drop["pos"][1] - TILE_SIZE*0.5,
-                                  '$', entity_type="coin")
+                    coin = Entity(cx - TILE_SIZE * 0.5, cy - TILE_SIZE * 0.5,
+                                  coin_key, entity_type="coin")
                     coin_drop.append(coin)
                 
             self.last_attack_time = now  # 맞췄을 때만 쿨타임 초기화
