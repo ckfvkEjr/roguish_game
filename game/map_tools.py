@@ -348,7 +348,7 @@ def generate_items_for_room(tilemap, exclude_symbols=None):
 
     ent = Entity(cx * TILE_SIZE, cy * TILE_SIZE, it_key, entity_type="item")
     # itemset의 texture 값을 엔티티에 주입 (경로 문자열)
-    ent.texture = item_types[it_key].get("texture")
+    #ent.texture = item_types[it_key].get("texture") # <- 임시로 삭제?
 
     items.append(ent)
 

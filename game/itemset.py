@@ -27,7 +27,7 @@ item_types = {
         "min_damage" : 1,
         "size" : 0,
         "attack_type" : None,
-        "texture" : "None"
+        "texture" : "assets/item/+1.png"
     },
     "it3" : {
         "name" : "Ruler",

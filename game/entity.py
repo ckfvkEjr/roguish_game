@@ -8,7 +8,7 @@ from game.config import*
 from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
 from game.loot import generate_coin_drop
-from game.itemset import coin_types
+from game.itemset import coin_types, item_types
 
 ITEM_TEXTURES = {}
 
@@ -79,6 +79,9 @@ class Entity:
             self.entity_type = 'item'
             self.size = TILE_SIZE * 0.5
             self.color = BLACK
+            info = item_types.get(symbol, {})
+            tex_path = info.get("texture")
+            self.texture = pygame.image.load(tex_path).convert_alpha() if tex_path else None
         elif entity_type == "coin":
             self.entity_type = "coin"
             self.size = TILE_SIZE*0.5
@@ -104,16 +107,16 @@ class Entity:
 
         # 아이템: 기존 스타일 유지 (필요 없다면 이 블록 삭제)
         if getattr(self, "entity_type", "") == "item":
-            tex = _get_item_texture(getattr(self, "texture", None))
+            tex = self.texture
             if tex:
-                cx, cy = rect.center
-                tr = tex.get_rect(center=(cx, cy))
-                screen.blit(tex, tr)
+                if tex.get_size() != rect.size:
+                    tex = pygame.transform.scale(tex, rect.size)
+                screen.blit(tex, (rect.x + self.size*0.5, rect.y + self.size*0.5))
             else:
                 # 폴백(텍스처 로드 실패 시): 작은 사각형
                 BLACK = (0, 0, 0)
-                cx = self.x + TILE_SIZE * 0.5 - self.size * 0.5
-                cy = self.y + TILE_SIZE * 0.5 - self.size * 0.5
+                cx = self.x + TILE_SIZE * 0.5 - rect.size * 0.5
+                cy = self.y + TILE_SIZE * 0.5 - rect.size * 0.5
                 pygame.draw.rect(screen, BLACK, (cx, cy, self.size, self.size))
             return
         elif getattr(self, "entity_type", "") == "coin":

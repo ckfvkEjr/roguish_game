@@ -422,7 +422,7 @@ def main():
 
         current_items = room_items.get((current_x, current_y), [])
         for item in current_items[:]:  # 복사본 반복
-            if check_collision(player, item):
+            if  (player, item):
                 from game.itemset import item_types
                 item_data = item_types.get(item.symbol, {})
                 apply_item_effect(player, item_data)
@@ -464,6 +464,8 @@ def main():
                 next_stage_timer = None
                 
         current_coin_list = room_coins.get((current_x, current_y), [])
+        
+        #코인 획득 로직
         for c in current_coin_list[:]:
             if (player.x < c.x + c.size and
                 player.x + player.size > c.x and
@@ -473,6 +475,7 @@ def main():
                 current_coin_list.remove(c)
         for c in current_coin_list:
             c.draw()
+            
         # 미니맵 등 UI 요소를 마지막에 그린다
         minimap.draw_minimap(explored_rooms, current_x, current_y,
                              MAP_WIDTH, MAP_HEIGHT, len(enemies), room_connections, boss_x, boss_y)
