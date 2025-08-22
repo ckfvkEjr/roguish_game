@@ -7,7 +7,7 @@ from game.config import TILE_SIZE, door, BLUE, BLACK, VIOLET, WHITE
 import game.config as config
 from game.mapset import predefined_rooms, start_rooms, boss_room, Item_room, sp2_room
 from game.entity import Entity
-from game.itemset import item_types
+from game.itemset import item_types, drop_items, rd_items
 
 
 special_coords = {}
@@ -293,8 +293,8 @@ def draw_tilemap(tilemap):
             pygame.draw.rect(screen, WHITE, rect)
 
             if tile == 0 or tile == 4 or tile == 5 or tile == 7:
-                # 이동 가능: 중앙에 '0'(옅게)
-                _blit_center_text(screen, "0", x, y, (170, 170, 170))
+                
+                _blit_center_text(screen, " ", x, y, (170, 170, 170))
 
             elif tile == 1:
                 # 벽1: 외곽선 + 'e^X'
@@ -425,3 +425,75 @@ def move_to_next_room(direction, player,
 
     return new_x, new_y, new_tilemap, new_enemies
 
+def pick_shop_items():
+    """
+    상점 판매 목록 구성:
+      - 체력 추가(또는 고정 드랍) 1개: drop_items 중에서 1개
+      - 낮은 확률 랜덤 스탯 1개: rd_items 중에서 0~1개
+    반환: [(item_key, price), ...]
+    """
+    sells = []
+    if drop_items:
+        k = random.choice(list(drop_items.keys()))
+        price = drop_items[k].get("price", 5)
+        sells.append((k, price))
+
+    # 낮은 확률로 랜덤 아이템 추가
+    if rd_items and random.random() < 0.35:
+        k = random.choice(list(rd_items.keys()))
+        price = rd_items[k].get("price", 8)
+        sells.append((k, price))
+
+    return sells
+
+import random
+from game.config import TILE_SIZE
+from game.entity import Entity
+
+def generate_shop_items_for_room(tilemap):
+    """
+    sp2_room 용. '8' 타일마다 상점 아이템 1개 생성.
+    - 각 칸은 drop(기본) 또는 rd(확률 rd_prob) 중 하나를 선택
+    - 전체 중복 방지(각 key는 한 번만 사용)
+    - '8'이 없으면 중앙 3자리에 임시 배치
+    반환: [{'ent': Entity(..., entity_type='drop'|'rd'), 'price': int}, ...]
+    """
+    # 1) 상점 스폿 수집
+    spots = [(c, r)
+             for r in range(len(tilemap))
+             for c in range(len(tilemap[r]))
+             if tilemap[r][c] == 8]
+
+    # fallback: 중앙 3칸
+    if not spots:
+        cy = len(tilemap) // 2
+        cx = len(tilemap[0]) // 2
+        spots = [(cx - 1, cy), (cx, cy), (cx + 1, cy)]
+
+    # 2) 중복 없는 풀 준비 (사본에서 뽑고 제거)
+    drop_keys = list(drop_items.keys()) if drop_items else []
+    rd_keys   = list(rd_items.keys()) if rd_items else []
+    random.shuffle(drop_keys)
+    random.shuffle(rd_keys)
+
+    result = []
+    for (cx, cy) in spots:
+        # 후보 타입 결정 (rd 확률 우선 시도, 없으면 다른 타입)
+        choose_rd = (random.random() < 0.35 and rd_keys) or (not drop_keys and rd_keys)
+        etype = "rd" if choose_rd else "drop"
+
+        # 3) 키 선택(중복 제거)
+        if etype == "rd":
+            etype = "rd"
+            key = rd_keys.pop()
+            price = 3 + 2 * (config.itdiff() - 1)
+        else:  # drop
+            etype = "drop"
+            key = drop_keys.pop()
+            price = 5 + 2 * (config.itdiff() - 1)
+
+        # 4) 엔티티 생성 (타일 좌상단 기준)
+        ent = Entity(cx * TILE_SIZE, cy * TILE_SIZE, key, entity_type=etype)
+        result.append({"ent": ent, "price": price})
+
+    return result

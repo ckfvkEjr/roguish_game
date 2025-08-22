@@ -12,8 +12,6 @@ from game.map_tools import (
     generate_enemies_for_room,
     generate_boss_for_room,
     generate_items_for_room,
-    
-    
 )
 from game.entity import Entity, draw_attack_area
 from game.collision import check_tile_collision, check_player_enemy_collision
@@ -29,7 +27,7 @@ room_first_visit = {}
 collected_items = set() #획득한 아이템
 player_coins = 0
 room_coins = {}  # {(x,y): [coin_entities...]}
-
+shop_goods = {}
 
 def apply_item_effect(player, item_data):
     if item_data.get("max_hp") is not None:
@@ -66,6 +64,21 @@ def check_collision(player, item):
         player.y < item_y + item.size and
         player.y + player.size > item_y
     )
+
+def ensure_shop_spawn(current_x, current_y, tilemap, special_coords):
+    # sp2 좌표인지 확인
+    sp2_xy = special_coords.get("sp2")
+    if sp2_xy is None:
+        return
+    if (current_x, current_y) != sp2_xy:
+        return
+
+    # 1회 생성
+    if (current_x, current_y) not in shop_goods:
+        print("상점 아이템 생성!")
+        from game.map_tools import generate_shop_items_for_room
+        goods = generate_shop_items_for_room(tilemap)
+        shop_goods[(current_x, current_y)] = goods
 
 def main():
     global boss_active, stage, MAP_WIDTH, MAP_HEIGHT
@@ -141,6 +154,7 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
+                    ensure_shop_spawn(current_x, current_y, tilemap, special_coords)
                     if (current_x, current_y) not in room_first_visit:
                         room_first_visit[(current_x, current_y)] = True
                     if room_first_visit.get((current_x, current_y), False):
@@ -172,6 +186,7 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
+                    ensure_shop_spawn(current_x, current_y, tilemap, special_coords)
                     if (current_x, current_y) not in room_first_visit:
                         room_first_visit[(current_x, current_y)] = True
                     if room_first_visit.get((current_x, current_y), False):
@@ -203,6 +218,7 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
+                    ensure_shop_spawn(current_x, current_y, tilemap, special_coords)
                     if (current_x, current_y) not in room_first_visit:
                         room_first_visit[(current_x, current_y)] = True
                     if room_first_visit.get((current_x, current_y), False):
@@ -234,6 +250,7 @@ def main():
                     current_x, current_y = nx, ny
                     tilemap  = new_tilemap
                     enemies  = new_enemies
+                    ensure_shop_spawn(current_x, current_y, tilemap, special_coords)
                     if (current_x, current_y) not in room_first_visit:
                         room_first_visit[(current_x, current_y)] = True
                     if room_first_visit.get((current_x, current_y), False):
@@ -301,7 +318,33 @@ def main():
                             boss_active = True
                             enemies = []
                             room_first_visit[(current_x, current_y)] = False
-
+            
+            elif keys[pygame.K_p]  :
+                print("p 누름")
+                sp2_x, sp2_y = special_coords.get("sp2", (None, None))
+                current_x, current_y = sp2_x, sp2_y
+                tilemap = map_data[(sp2_x,sp2_y)]
+                explored_rooms[(sp2_x, sp2_y)] = True           
+                draw_tilemap(tilemap)
+                ensure_shop_spawn(current_x, current_y, tilemap, special_coords)
+                if (current_x, current_y) not in room_first_visit:
+                    room_first_visit[(current_x, current_y)] = True
+                    if room_first_visit.get((current_x, current_y), False):
+                        if any(7 in row for row in tilemap):
+                            if not room_items.get((current_y, current_y)):
+                                generated = generate_items_for_room(tilemap)
+                                if generated:
+                                    room_items[(current_x, current_y)] = generated
+                                    items = generated
+                                    room_first_visit[(current_x, current_y)] = False
+                                    print("아이템 생성!")
+                        if not boss and any(5 in row for row in tilemap):
+                            print("[1회 방문] 보스 생성 시작")
+                            boss = generate_boss_for_room(tilemap, config.itdiff())
+                            boss_active = True
+                            enemies = []
+                            room_first_visit[(current_x, current_y)] = False
+                            
         new_x, new_y = player.x, player.y
         if keys[pygame.K_LEFT]:
             new_x -= player.speed
@@ -356,7 +399,7 @@ def main():
             explored_rooms[(current_x, current_y)] = True
 
             screen.fill(BLACK)
-        
+                
         if next_stage_active == True:
             # 플레이어 중심 좌표로 타일 위치 계산
             px = int((player.x + player.size/2) // TILE_SIZE)
@@ -388,6 +431,7 @@ def main():
                         room_items = {}
                         room_first_visit = {}
                         player_coins = 0
+                        player.coins = 0
                         room_coins.clear()
                         explored_rooms = { (x, y): False for x in range(MAP_WIDTH) for y in range(MAP_HEIGHT) }
                         explored_rooms[(current_x, current_y)] = True
@@ -422,13 +466,13 @@ def main():
 
         current_items = room_items.get((current_x, current_y), [])
         for item in current_items[:]:  # 복사본 반복
-            if  (player, item):
+            if  check_collision (player, item):
                 from game.itemset import item_types
                 item_data = item_types.get(item.symbol, {})
                 apply_item_effect(player, item_data)
                 current_items.remove(item)
                 break  # 1개만 처리   
-        
+
         for item in room_items.get((current_x, current_y), []):
             item.draw()
 
@@ -471,11 +515,49 @@ def main():
                 player.x + player.size > c.x and
                 player.y < c.y + c.size and
                 player.y + player.size > c.y):
-                player_coins += getattr(c, "coin_value", 1)
+                player.coins += getattr(c, "coin_value", 1)
                 current_coin_list.remove(c)
         for c in current_coin_list:
             c.draw()
-            
+        
+        # ─── 상점 구매 처리 ───
+        for g in shop_goods.get((current_x, current_y), [])[:]:  # 복사본 반복
+            ent = g["ent"]
+            price = g["price"]
+
+            # 상점 아이템도 기존 아이템과 같은 중심 충돌 AABB 사용
+            item_x = ent.x + TILE_SIZE * 0.5 - ent.size * 0.5
+            item_y = ent.y + TILE_SIZE * 0.5 - ent.size * 0.5
+            hit = (
+                player.x < item_x + ent.size and
+                player.x + player.size > item_x and
+                player.y < item_y + ent.size and
+                player.y + player.size > item_y
+            )
+            if not hit:
+                continue
+
+            if player.coins >= price:
+                # 구매: 코인 차감 + 효과 적용 + 제거
+                from game.itemset import item_types
+                data = item_types.get(ent.symbol, {})
+                apply_item_effect(player, data)
+                player.coins -= price
+                shop_goods[(current_x, current_y)].remove(g)
+                print(f"[SHOP] '{ent.symbol}' 구매 완료 (-{price}c, 보유 {player.coins})")
+            else:
+                # 코인 부족 안내
+                print(f"[SHOP] 코인이 부족합니다. 가격 {price}, 보유 {player.coins}")
+                
+        for g in shop_goods.get((current_x, current_y), []):
+            g["ent"].draw()
+            # 가격 텍스트
+            font = pygame.font.SysFont(None, 24, bold=True)
+            price_surf = font.render(f"{g['price']}c", True, (255, 255, 0))
+            gx = g["ent"].x + TILE_SIZE*0.5 - price_surf.get_width()/2
+            gy = g["ent"].y + TILE_SIZE*0.5 + g["ent"].size*0.6
+            screen.blit(price_surf, (gx, gy))
+                
         # 미니맵 등 UI 요소를 마지막에 그린다
         minimap.draw_minimap(explored_rooms, current_x, current_y,
                              MAP_WIDTH, MAP_HEIGHT, len(enemies), room_connections, boss_x, boss_y)
@@ -503,7 +585,7 @@ def main():
         
         # HUD에 코인 표시(HP 아래 등)
         font = pygame.font.SysFont(None, 24)
-        coin_text = font.render(f"COIN: {player_coins}", True, (255,255,255))
+        coin_text = font.render(f"COIN: {player.coins}", True, (255,255,255))
         screen.blit(coin_text, (SCREEN_WIDTH - 220, 100))
 
         # 수치 텍스트

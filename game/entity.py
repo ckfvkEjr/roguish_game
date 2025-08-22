@@ -8,7 +8,7 @@ from game.config import*
 from game.collision import check_corner_collision, check_tile_collision
 import game.config as config
 from game.loot import generate_coin_drop
-from game.itemset import coin_types, item_types
+from game.itemset import coin_types, item_types, drop_items, rd_items
 
 ITEM_TEXTURES = {}
 
@@ -53,7 +53,7 @@ class Entity:
             self.hp               = self.max_hp
             self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*config.itdiff()
             self.color            = RED
-            self.attack_speed     = 0.75 - 0.025*config.itdiff()
+            self.attack_speed     = 0.75 - 0.0125*config.itdiff()
             self.damage           = 2
             self.attack_types     = ["+", "-"]
             self.attack_index     = 0
@@ -65,6 +65,7 @@ class Entity:
             self.last_damage_time = 0
             self.last_attack_time = 0
             self.last_direction   = "down"
+            self.coins            = 0
         elif entity_type.startswith("B_"):
             attrs = boss_types(config.itdiff()).get(entity_type, boss_types(config.itdiff())["B_a"])
             self.hp               = attrs["hp"]
@@ -90,6 +91,18 @@ class Entity:
             self.coin_value = info.get("value", 1)  # 기본 1
             tex_path = info.get("texture")
             self.texture = pygame.image.load(tex_path).convert_alpha() if tex_path else None
+        elif entity_type == "drop":
+            self.entity_type = "drop"
+            self.size = 0.5*TILE_SIZE
+            info = drop_items.get(symbol, {})
+            tex_path = info.get("texture")
+            self.texture = pygame.image.load(tex_path).convert_alpha() if tex_path else None
+        elif entity_type == "rd":
+            self.entity_type = "rd"
+            self.size = TILE_SIZE * 0.5
+            info = rd_items.get(symbol, {})
+            tex_path = info.get("texture")
+            self.texture = pygame.image.load(tex_path).convert_alpha() if tex_path else None
         else:
             attrs = enemy_types(config.itdiff()).get(entity_type, enemy_types(config.itdiff())["a"])
             self.hp               = attrs["hp"]
@@ -106,7 +119,7 @@ class Entity:
         rect = pygame.Rect(int(self.x), int(self.y), int(self.size), int(self.size))
 
         # 아이템: 기존 스타일 유지 (필요 없다면 이 블록 삭제)
-        if getattr(self, "entity_type", "") == "item":
+        if getattr(self, "entity_type", "") in ("item", "rd", "drop"):
             tex = self.texture
             if tex:
                 if tex.get_size() != rect.size:
@@ -115,8 +128,8 @@ class Entity:
             else:
                 # 폴백(텍스처 로드 실패 시): 작은 사각형
                 BLACK = (0, 0, 0)
-                cx = self.x + TILE_SIZE * 0.5 - rect.size * 0.5
-                cy = self.y + TILE_SIZE * 0.5 - rect.size * 0.5
+                cx = self.x + TILE_SIZE * 0.5 - self.size * 0.5
+                cy = self.y + TILE_SIZE * 0.5 - self.size * 0.5
                 pygame.draw.rect(screen, BLACK, (cx, cy, self.size, self.size))
             return
         elif getattr(self, "entity_type", "") == "coin":
@@ -218,7 +231,7 @@ class Entity:
         if now - self.last_attack_time < self.attack_speed:
             return []
 
-        attack_range = self.attack_range * TILE_SIZE
+        attack_range = self.attack_range * TILE_SIZE + 0.5 * TILE_SIZE 
         attack_width = TILE_SIZE*1.1  # 기존보다 살짝 넓힘
         px = self.x + self.size / 2
         py = self.y + self.size / 2
