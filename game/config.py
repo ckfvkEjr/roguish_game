@@ -24,7 +24,7 @@ TILE_SIZE = 75
 item = 7
 next_stage = 6
 door               = 3
-walkable_tiles     = {0,3,4,5,6,7}
+walkable_tiles     = {0,3,4,5,6,7,8}
 non_walkable_tiles = {1,2}
 
 

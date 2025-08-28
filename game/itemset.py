@@ -16,14 +16,14 @@ item_types = {
         "texture" : "assets/item/heart.png"
     },
     "it2" : {
-        "name" : "+5",
+        "name" : "+1",
         "hp" : None,
         "max_hp" : None,
         "speed" : None,
         "attack_speed" : None,
         "attack_range" : None,
-        "damage" : 5,
-        "max_damage" : 5,
+        "damage" : 3,
+        "max_damage" : 3,
         "min_damage" : 1,
         "size" : None,
         "attack_type" : None,
@@ -47,7 +47,7 @@ item_types = {
         "name" : "s",
         "hp" : None,
         "max_hp" : None,
-        "speed" : TILE_SIZE*0.5,
+        "speed" : (TILE_SIZE/50)*0.5,
         "attack_speed" : 0.9,
         "attack_range" : None,
         "damage" : None,
@@ -57,7 +57,7 @@ item_types = {
         "attack_type" : None,
         "texture" : "assets/item/hand_clock.png"
     },
-    "it4" : {
+    "it5" : {
         "name" : "x^2",
         "hp" : None,
         "max_hp" : None,
@@ -72,6 +72,91 @@ item_types = {
         "sqauare_min_max_damage" : 1,
         "texture" : "assets/item/x^2.png"
     },
+    "it6" : {
+        "name" : "wa!_palra",
+        "hp" : None,
+        "max_hp" : None,
+        "speed" : (TILE_SIZE/50),
+        "attack_speed" : None,
+        "attack_range" : None,
+        "damage" : None,
+        "max_damage" : None,
+        "min_damage" : None,
+        "size" : None,
+        "attack_type" : None,
+        "texture" : "assets/item/spppeeeed.png"
+    },
+    "it7" : {
+        "name" : "heavy",
+        "hp" : None,
+        "max_hp" : None,
+        "speed" : -((TILE_SIZE/50)*0.5),
+        "attack_speed" : None,
+        "attack_range" : None,
+        "damage" : None,
+        "max_damage" : None,
+        "min_damage" : None,
+        "size" : None,
+        "attack_type" : None,
+        "texture" : "assets/item/mu.png"
+    },
+    "it8" : {
+        "name" : "heart^2",
+        "hp" : 50,
+        "max_hp" : 50,
+        "speed" : None,
+        "attack_speed" : None,
+        "attack_range" : None,
+        "damage" : None,
+        "max_damage" : None,
+        "min_damage" : None,
+        "size" : None,
+        "attack_type" : None,
+        "texture" : "assets/item/heartv2.png"
+    },
+    "it9" : {
+        "name" : "I_heart",
+        "hp" : None,
+        "max_hp" : 30,
+        "speed" : None,
+        "attack_speed" : None,
+        "attack_range" : None,
+        "damage" : None,
+        "max_damage" : None,
+        "min_damage" : None,
+        "size" : None,
+        "attack_type" : None,
+        "texture" : "assets/item/I_heart.png"
+    },
+    "it10" : {
+        "name" : "I_heartv2",
+        "hp" : None,
+        "max_hp" : 50,
+        "speed" : None,
+        "attack_speed" : None,
+        "attack_range" : None,
+        "damage" : None,
+        "max_damage" : None,
+        "min_damage" : None,
+        "size" : None,
+        "attack_type" : None,
+        "texture" : "assets/item/I_heartv2.png"
+    },
+    "it11" : {
+        "name" : "+5",
+        "hp" : None,
+        "max_hp" : None,
+        "speed" : None,
+        "attack_speed" : None,
+        "attack_range" : None,
+        "damage" : 5,
+        "max_damage" : 5,
+        "min_damage" : 2,
+        "size" : None,
+        "attack_type" : None,
+        "texture" : "assets/item/+5.png"
+    },
+
 }
 
 coin_types = {
@@ -172,7 +257,7 @@ rd_items = { "r1" : {
         "max_hp" : None,
         "speed" : None,
         "attack_speed" : None,
-        "attack_range" : 0.1*TILE_SIZE,
+        "attack_range" : 0.1,
         "damage" : None,
         "max_damage" : None,
         "min_damage" : None,
@@ -185,7 +270,7 @@ rd_items = { "r1" : {
         "max_hp" : None,
         "speed" : None,
         "attack_speed" : None,
-        "attack_range" : -(0.1*TILE_SIZE),
+        "attack_range" : -(0.1),
         "damage" : None,
         "max_damage" : None,
         "min_damage" : None,
@@ -218,11 +303,11 @@ rd_items = { "r1" : {
         "size" : None,
         "texture" : "assets/loot/rd_dice.png"
 },
-            "11" : {
+            "r11" : {
         "name" : "light",
         "hp" : None,
         "max_hp" : None,
-        "speed" : TILE_SIZE*0.075,
+        "speed" : (TILE_SIZE/50)*0.075,
         "attack_speed" : None,
         "attack_range" : None,
         "damage" : None,
@@ -231,11 +316,11 @@ rd_items = { "r1" : {
         "size" : -(TILE_SIZE*0.05),
         "texture" : "assets/loot/rd_dice.png"
 },
-            "12" : {
+            "r12" : {
         "name" : "heavy",
         "hp" : None,
         "max_hp" : None,
-        "speed" : None,
+        "speed" : -((TILE_SIZE/50)*0.075),
         "attack_speed" : None,
         "attack_range" : None,
         "damage" : None,

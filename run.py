@@ -25,30 +25,42 @@ items = []
 room_items = {}
 room_first_visit = {}
 collected_items = set() #획득한 아이템
-player_coins = 0
+player_coins = 0    
 room_coins = {}  # {(x,y): [coin_entities...]}
 shop_goods = {}
 
 def apply_item_effect(player, item_data):
     if item_data.get("max_hp") is not None:
         player.max_hp += item_data["max_hp"]
+        if player.max_hp < 10:
+            player.max_hp = 10
     if item_data.get("hp") is not None:
         player.hp = min(player.hp + item_data["hp"], player.max_hp)
         player.hp = min(player.hp, player.max_hp)
     if item_data.get("speed") is not None:
         player.speed += item_data["speed"]
+        if player.speed < (TILE_SIZE/50)*0.25:
+            player.speed = (TILE_SIZE/50)*0.25 
     if item_data.get("attack_speed") is not None:
         player.attack_speed *= item_data["attack_speed"]
     if item_data.get("attack_range") is not None:
         player.attack_range += item_data["attack_range"]
+        if player.attack_range < 0.5:
+            player.attack_range = 0.5
     if item_data.get("damage") is not None:
         player.damage += item_data["damage"]
     if item_data.get("max_damage") is not None:
         player.max_damage += item_data["max_damage"]
+        if player.max_damage < player.min_damage:
+            player.max_damage = player.min_damage
     if item_data.get("min_damage") is not None:
         player.min_damage += item_data["min_damage"]
+        if player.min_damage < 1:
+            player.min_damage = 1
     if item_data.get("size") is not None:
         player.size += item_data["size"]
+        if player.size < TILE_SIZE*0.1:
+            player.size = TILE_SIZE*0.1
     if item_data.get("sqauare_min_max_damage") is not None:
         player.max_damage = player.max_damage*player.max_damage
         player.min_damage = player.min_damage*player.min_damage
@@ -539,8 +551,12 @@ def main():
 
             if player.coins >= price:
                 # 구매: 코인 차감 + 효과 적용 + 제거
-                from game.itemset import item_types
-                data = item_types.get(ent.symbol, {})
+                from game.itemset import drop_items, rd_items
+                if ent.symbol in drop_items:
+                    data = drop_items[ent.symbol]
+                elif ent.symbol in rd_items:
+                    data = rd_items[ent.symbol]
+                
                 apply_item_effect(player, data)
                 player.coins -= price
                 shop_goods[(current_x, current_y)].remove(g)

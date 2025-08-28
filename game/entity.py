@@ -51,7 +51,7 @@ class Entity:
         if entity_type == "player":
             self.max_hp           = 100
             self.hp               = self.max_hp
-            self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*config.itdiff()
+            self.speed            = (TILE_SIZE/50)*2 + (TILE_SIZE/50)*0.25*(config.itdiff() - 1)
             self.color            = RED
             self.attack_speed     = 0.75 - 0.0125*config.itdiff()
             self.damage           = 2
@@ -86,7 +86,7 @@ class Entity:
         elif entity_type == "coin":
             self.entity_type = "coin"
             self.size = TILE_SIZE*0.5
-            self.color = YELLOW
+            self.color = BLACK
             info = coin_types.get(symbol, {})
             self.coin_value = info.get("value", 1)  # 기본 1
             tex_path = info.get("texture")
